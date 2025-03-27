@@ -6,13 +6,14 @@ apt-get update && apt-get install -y \
     wget unzip openjdk-17-jdk python3 git perl \
     build-essential pkg-config;
 
-export NDK_VERSION="27.0.12077973"
-export CMAKE_VERSION="3.30.5"
-export ANDROID_VERSION="35"
-export BUILD_TOOLS="35.0.0"
+export NDK_VERSION="28.0.13004108"
+export CMAKE_VERSION="3.31.6"
+export ANDROID_VERSION="36"
+export BUILD_TOOLS="36.0.0"
 export ANDROID_HOME="$HOME/Android"
 export ANDROID_NDK_ROOT="${ANDROID_HOME}/ndk/${NDK_VERSION}"
 export PATH="${ANDROID_HOME}/cmake/${CMAKE_VERSION}/bin:${ANDROID_HOME}/cmdline-tools/bin:${PATH}"
+export MIN_SDK_VERSION=24
 
 mkdir -p ${ANDROID_HOME} && \
     cd ${ANDROID_HOME} && \
