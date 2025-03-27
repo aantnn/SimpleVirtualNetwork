@@ -31,6 +31,9 @@ mkdir -p ${ANDROID_HOME} && \
 ```
 # Build deps of sofrethervpn and build libvpnclient.so
 ```bash
+set -Eeuo pipefail
+set -o nounset
+set -o errexit
 export NDK_VERSION="28.0.13004108"
 export CMAKE_VERSION="3.31.6"
 export ANDROID_VERSION="36"
