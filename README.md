@@ -2,7 +2,8 @@
 [Linux make tool is required](https://github.com/antnn/SimpleVirtualNetwork/blob/b2b660cf6ed07ee14527e375b763712a29600edd/nativevpn/src/main/cpp/cmake/modules/FindOpenSSL.cmake#L42)
 # OR Install SDK
 ```bash
-#openssl requires perl-FindBin perl-core perl-lib
+# OpenSSL dependencies: perl-FindBin, perl-core, perl-lib
+# Missing these will cause header generation to fail during configuration in Android Studio
 apt-get update && apt-get install -y \
     wget unzip openjdk-17-jdk python3 git perl \
     build-essential pkg-config;
