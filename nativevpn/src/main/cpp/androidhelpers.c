@@ -4,6 +4,8 @@
 #include <android/log.h>
 #include <stdarg.h>
 #include "global.h"
+#include <stdlib.h>
+#include <pthread.h>
 
 
 extern int AndroidLog(const char* format, ...) {
@@ -19,14 +21,35 @@ extern int AndroidLog(const char* format, ...) {
     //pause();
 }*/
 
-extern char* GetAndroidDbDir() {
-    return g_vpn_config.database_dir_path ? strdup(g_vpn_config.database_dir_path) : NULL;
-}
-
 extern char* GetAndroidLogDir() {
-    return g_vpn_config.log_dir_path ? strdup(g_vpn_config.log_dir_path) : NULL;
+    char* result = NULL;
+    if (pthread_rwlock_rdlock(&g_config_rwlock) == 0) {
+        if (g_vpn_config.log_dir_path) {
+            result = strdup(g_vpn_config.log_dir_path);
+        }
+        pthread_rwlock_unlock(&g_config_rwlock);
+    }
+    return result;
 }
 
 extern char* GetAndroidTmpDir() {
-    return g_vpn_config.temporary_dir_path ? strdup(g_vpn_config.temporary_dir_path) : NULL;
+    char* result = NULL;
+    if (pthread_rwlock_rdlock(&g_config_rwlock) == 0) {
+        if (g_vpn_config.temporary_dir_path) {
+            result = strdup(g_vpn_config.temporary_dir_path);
+        }
+        pthread_rwlock_unlock(&g_config_rwlock);
+    }
+    return result;
+}
+
+extern char* GetAndroidDbDir() {
+    char* result = NULL;
+    if (pthread_rwlock_rdlock(&g_config_rwlock) == 0) {
+        if (g_vpn_config.database_dir_path) {
+            result = strdup(g_vpn_config.database_dir_path);
+        }
+        pthread_rwlock_unlock(&g_config_rwlock);
+    }
+    return result;
 }

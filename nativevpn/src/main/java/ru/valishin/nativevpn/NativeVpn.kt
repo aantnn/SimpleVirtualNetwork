@@ -28,9 +28,9 @@ class NativeVpn(private val applicationInfo: ApplicationInfo, private val contex
 
     private fun initializeDirectories() {
         try {
-            setTmpDir(temporaryDir)
-            setLogDir(temporaryDir)
-            setDbDir(databaseDir)
+            setTemporaryDirectory(temporaryDir)
+            setLogDirectory(temporaryDir)
+            setDatabaseDirectory(databaseDir)
             copyHamcore()
         } catch (e: IOException) {
             Log.e(TAG, "Failed to initialize VPN directories", e)
@@ -57,9 +57,9 @@ class NativeVpn(private val applicationInfo: ApplicationInfo, private val contex
 
     external fun closeFd(fd: Int)
 
-    private external fun setTmpDir(dir: String)
-    private external fun setLogDir(dir: String)
-    private external fun setDbDir(dir: String)
+    private external fun setTemporaryDirectory(dir: String)
+    private external fun setLogDirectory(dir: String)
+    private external fun setDatabaseDirectory(dir: String)
     private external fun nativeStartVpnClient(args: Array<String>)
 
     @JvmOverloads

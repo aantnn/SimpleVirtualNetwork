@@ -14,7 +14,7 @@
 #define NATIVE_VPN_ERR_LOCK "Lock operation failed"
 
 // Read-write lock for thread-safe access to shared configuration
-static pthread_rwlock_t g_config_rwlock = PTHREAD_RWLOCK_INITIALIZER;
+pthread_rwlock_t g_config_rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
 static inline int vpn_client_entrypoint(int argc, char *argv[]) {
     return VpnClientMain(argc, argv);
@@ -48,7 +48,7 @@ static int cleanup_global_config(JNIEnv *env) {
     return 0;
 }
 
-static jboolean get_global_config_string(char **output, const char *source) {
+extern jboolean get_global_config_string(char **output, const char *source) {
     if (pthread_rwlock_rdlock(&g_config_rwlock) != 0) {
         ERROR_LOG(NATIVE_VPN_ERR_LOCK);
         return JNI_FALSE;
@@ -126,7 +126,7 @@ Java_ru_valishin_nativevpn_NativeVpn_closeFileDescriptor(
 }
 
 JNIEXPORT void JNICALL
-Java_ru_valishin_nativevpn_NativeVpn_startVpnClient(
+Java_ru_valishin_nativevpn_NativeVpn_nativeStartVpnClient(
         JNIEnv *env, jobject thiz, jobjectArray arguments) {
     (void)thiz; // Unused parameter
 

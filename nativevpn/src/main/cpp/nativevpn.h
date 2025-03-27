@@ -13,7 +13,9 @@
 #define DEBUG_LOG(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
 
 extern int VpnClientMain(int argc, char *argv[]);
-
+JNIEXPORT jstring JNICALL
+        Java_ru_valishin_nativevpn_NativeVpn_getLogDirectory(
+                JNIEnv *env, jobject thiz);
 
 #endif //SIMPLEVPN_LIBEXECVPNCLIENT_H
 

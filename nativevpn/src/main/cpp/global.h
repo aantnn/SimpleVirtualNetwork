@@ -2,7 +2,9 @@
 #define MYVPNCLIENTGLOBAL_H
 
 #include <jni.h>
+#include <pthread.h>
 
+extern pthread_rwlock_t g_config_rwlock;
 struct vpn_global_config {
     // JNI environment pointer (valid only when attached to Java thread)
     JNIEnv* jni_env;
