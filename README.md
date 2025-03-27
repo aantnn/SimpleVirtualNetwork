@@ -3,7 +3,7 @@
 # OR Install SDK
 ```bash
 # OpenSSL dependencies: perl-FindBin, perl-core, perl-lib
-# Missing these will cause header generation to fail during configuration in Android Studio
+# Android Studio's configure step fails if these are missing (headers are generated at this stage)
 apt-get update && apt-get install -y \
     wget unzip openjdk-17-jdk python3 git perl \
     build-essential pkg-config;
