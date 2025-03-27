@@ -6,6 +6,7 @@
 # Android Studio initiates a configuration step upon opening a project.
 # These dependencies are required during this configuration step for OpenSSL header generation. 
 # Without them, the configuration step will fail.
+# See: https://github.com/bugzhunter1/SimpleVirtualNetwork/blob/070c6c84c585c441702b019bc3dc535604e71d60/nativevpn/src/main/cpp/cmake/modules/FindOpenSSL.cmake#L88
 apt-get update && apt-get install -y \
     wget unzip openjdk-17-jdk python3 git perl \
     build-essential pkg-config;
