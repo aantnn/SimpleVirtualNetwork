@@ -20,13 +20,13 @@ extern int AndroidLog(const char* format, ...) {
 }*/
 
 extern char* GetAndroidDbDir() {
-    return global_data.db_dir ? strdup(global_data.db_dir) : NULL;
+    return g_vpn_config.database_dir_path ? strdup(g_vpn_config.database_dir_path) : NULL;
 }
 
 extern char* GetAndroidLogDir() {
-    return global_data.log_dir ? strdup(global_data.log_dir) : NULL;
+    return g_vpn_config.log_dir_path ? strdup(g_vpn_config.log_dir_path) : NULL;
 }
 
 extern char* GetAndroidTmpDir() {
-    return global_data.tmp_dir ? strdup(global_data.tmp_dir) : NULL;
+    return g_vpn_config.temporary_dir_path ? strdup(g_vpn_config.temporary_dir_path) : NULL;
 }

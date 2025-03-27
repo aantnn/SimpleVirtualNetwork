@@ -3,15 +3,25 @@
 
 #include <jni.h>
 
-struct global_data {
-    char *tmp_dir;
-    char *log_dir;
-    char *db_dir;
-    JNIEnv *env;
-    jobject thiz;
+struct vpn_global_config {
+    // JNI environment pointer (valid only when attached to Java thread)
+    JNIEnv* jni_env;
+
+    // Global reference to the Java VPN service object
+    jobject thiz_java_vpn_service;
+
+    // Path to temporary directory (owned by this struct)
+    char* temporary_dir_path;
+
+    // Path to log directory (owned by this struct)
+    char* log_dir_path;
+
+    // Path to database directory (owned by this struct)
+    char* database_dir_path;
+
 };
 
-extern struct global_data global_data;
+extern struct vpn_global_config g_vpn_config;
 #define TAG "NativeVpn"
 
 #endif

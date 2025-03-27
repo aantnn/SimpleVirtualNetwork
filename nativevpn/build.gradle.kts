@@ -26,7 +26,7 @@ android {
 
     }
     namespace = "ru.valishin.nativevpn"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
@@ -45,7 +45,7 @@ android {
                 //arguments("-DCMAKE_C_FLAGS=-I${project.projectDir.absolutePath}/src/main/cpp/include" )
             }
         }
-        targetSdk = 35
+        targetSdk = 36
     }
 
 
@@ -71,6 +71,8 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    ndkVersion = "28.0.13004108"
+    buildToolsVersion = "36.0.0"
 }
 
 dependencies {
