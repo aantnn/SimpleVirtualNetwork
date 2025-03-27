@@ -30,6 +30,15 @@ mkdir -p ${ANDROID_HOME} && \
 ```
 # Build deps of sofrethervpn and build libvpnclient.so
 ```bash
+export NDK_VERSION="28.0.13004108"
+export CMAKE_VERSION="3.31.6"
+export ANDROID_VERSION="36"
+export BUILD_TOOLS="36.0.0"
+export ANDROID_HOME="$HOME/Android"
+export ANDROID_NDK_ROOT="${ANDROID_HOME}/ndk/${NDK_VERSION}"
+export PATH="${ANDROID_HOME}/cmake/${CMAKE_VERSION}/bin:${ANDROID_HOME}/cmdline-tools/bin:${PATH}"
+export MIN_SDK_VERSION=24
+
 cd SimpleVirtualNetwork
  while IFS='=' read -r key value; do
     [[ $key =~ ^#.*$ || -z $key ]] && continue;     
