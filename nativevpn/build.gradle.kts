@@ -28,11 +28,16 @@ android {
     namespace = "ru.valishin.nativevpn"
     compileSdk = 36
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         minSdk = 24
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+        buildConfigField("String", "SOFTETHERVPN_VERSION", "\"${versions["SOFTETHERVPN_VERSION"]?.replace(".", "_")}\"")
         externalNativeBuild {
             cmake {
                 cppFlags("")

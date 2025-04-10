@@ -9,7 +9,7 @@ import java.io.IOException
 class NativeVpn(private val applicationInfo: ApplicationInfo, private val context: Context) {
     companion object {
         private const val TAG = "NativeVpn"
-        private const val HAMCORE_FILENAME = "hamcore.se2"
+        private const val HAMCORE_FILENAME = "hamcore_se2_v${BuildConfig.SOFTETHERVPN_VERSION}"
         private const val SE_TMP_DIR = "se_tmp"
         private const val SE_DB_DIR = "se_db"
 
@@ -42,13 +42,35 @@ class NativeVpn(private val applicationInfo: ApplicationInfo, private val contex
         try {
             File(temporaryDir).mkdirs()
             val hamcoreFile = File(temporaryDir, HAMCORE_FILENAME)
+            
             if (!hamcoreFile.exists()) {
-                context.resources.openRawResource(R.raw.hamcore_se2).use { input ->
+                val resourceId = try {
+                    context.resources.getIdentifier(
+                        HAMCORE_FILENAME,
+                        "raw",
+                        context.packageName
+                    )
+                } catch (e: Exception) {
+                    throw VpnInitializationException("Failed to find hamcore resource for version ${HAMCORE_FILENAME}", e)
+                }
+
+                context.resources.openRawResource(resourceId).use { input ->
                     hamcoreFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
                 }
             }
+            Thread {
+                try {
+                    File(temporaryDir).listFiles()?.forEach { file ->
+                        if (file.name.startsWith("hamcore_se2_v") && file.name != HAMCORE_FILENAME) {
+                            file.delete()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to clean up old hamcore files", e)
+                }
+            }.start()
         } catch (e: IOException) {
             Log.e(TAG, "Failed to copy hamcore file", e)
             throw VpnInitializationException("Failed to copy hamcore file", e)
