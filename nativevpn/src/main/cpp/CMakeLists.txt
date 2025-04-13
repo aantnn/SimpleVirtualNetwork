@@ -83,7 +83,7 @@ set(NPROC ${nproc})
 # Android helpers library
 add_library(androidhelpers INTERFACE)
 target_include_directories(androidhelpers INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_compile_definitions(androidhelpers INTERFACE androidhelpers=1)
+target_compile_definitions(androidhelpers INTERFACE)
 
 # Add SoftEther VPN subdirectory
 add_subdirectory("${SOFTETHERVPN_SOURCE_DIR}")
