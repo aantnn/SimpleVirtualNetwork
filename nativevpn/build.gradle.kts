@@ -19,7 +19,7 @@ fun loadProperties(filename: String): Map<String, String> {
     return properties
 }
 
-val versions = loadProperties("deps.txt")
+val versions = loadProperties("../deps.txt")
 
 android {
     sourceSets {
