@@ -21,29 +21,19 @@ foreach(LINE ${DEPS_LINES})
 endforeach()
 
 # OpenSSL configuration
-set(OPENSSL_VERSION "$ENV{OPENSSL_VERSION}" CACHE STRING "OpenSSL version")
-set(OPENSSL_URL "$ENV{OPENSSL_URL}" CACHE STRING "OpenSSL URL")
-set(OPENSSL_SHA "$ENV{OPENSSL_SHA}" CACHE STRING "openssl sha256sum")
+
 set(OPENSSL_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/openssl)
 download_and_extract("${OPENSSL_URL}" "${OPENSSL_SHA}" "${OPENSSL_SOURCE_DIR}")
 
 # libsodium configuration
-set(SODIUM_VERSION "$ENV{SODIUM_VERSION}" CACHE STRING "libsodium version")
-set(SODIUM_URL "$ENV{SODIUM_URL}" CACHE STRING "libsodium URL")
-set(SODIUM_SHA "$ENV{SODIUM_SHA}" CACHE STRING "libsodium sha256sum")
 set(SODIUM_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/libsodium)
 download_and_extract("${SODIUM_URL}" "${SODIUM_SHA}" "${SODIUM_SOURCE_DIR}")
 
 # libiconv configuration
-set(ICONV_VERSION "$ENV{ICONV_VERSION}" CACHE STRING "libiconv version")
-set(ICONV_SHA "$ENV{ICONV_SHA}" CACHE STRING "libiconv sha256")
-set(ICONV_URL "$ENV{ICONV_URL}" CACHE STRING "libiconv URL")
 set(ICONV_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/iconv)
 download_and_extract("${ICONV_URL}" "${ICONV_SHA}" "${ICONV_SOURCE_DIR}")
 
 # SoftEther VPN configuration
-set(SOFTETHERVPN_VERSION "$ENV{SOFTETHERVPN_VERSION}" CACHE STRING "SoftetherVPN version")
-set(SOFTETHERVPN_REPO "$ENV{SOFTETHERVPN_REPO}" CACHE STRING "SoftetherVPN repo")
 set(SOFTETHERVPN_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/softethervpn)
 
 # Clone SoftEther VPN repository
