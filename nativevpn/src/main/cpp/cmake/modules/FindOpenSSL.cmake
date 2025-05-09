@@ -36,12 +36,12 @@ set(openssl_configure_flags
 
 set(OPENSSL_CONFIGURE_COMMAND
         cd "<SOURCE_DIR>" &&
-        ${CMAKE_COMMAND} -E env ${android_env} "<SOURCE_DIR>/Configure" ${openssl_configure_flags}
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} perl "<SOURCE_DIR>/Configure" ${openssl_configure_flags}
         "--prefix=<INSTALL_DIR>")
 set(OPENSSL_BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env ${android_env} make -j${NPROC} -sC "<SOURCE_DIR>" build_libs)
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" build_libs)
 set(OPENSSL_INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env ${android_env} make -j${NPROC} -sC "<SOURCE_DIR>" install_dev install_runtime)
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" install_dev install_runtime)
 
 
 #BUILD_IN_SOURCE 1 SO COPY
@@ -80,13 +80,14 @@ set(OPENSSL_SSL_LIBRARY "${INSTALL_DIR}/lib/libssl.so")
 message(WARNING "Generating headers due to CMake and Ninja build system limitations in External build prioritization 
 https://discourse.cmake.org/t/design-cmake-projects-with-autocode-generators/9011/2")
 set(openssl_configure_flags
-        ./Configure
+        perl ./Configure
         ${OPENSSL_TARGET}
         --prefix=${CMAKE_CURRENT_SOURCE_DIR}/build
         -D__ANDROID_API__=${ANDROID_NATIVE_API_LEVEL}
         -fPIC shared no-ui no-ui-console no-engine no-filenames)
 build_autoconf_external_project(openssl "${OPENSSL_SOURCE_DIR}" "" "${openssl_configure_flags}" "build_generated" "build_generated" "")
 # Ninja does not respect byproducts with headers. It behaves like they already there
+message(FATAL_ERROR "debug")
 set(OPENSSL_INCLUDE_DIR "${SUPER_BUILD_DIR}/include;${INSTALL_DIR}/include")
 set(OPENSSL_INSTALL_PREFIX "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
