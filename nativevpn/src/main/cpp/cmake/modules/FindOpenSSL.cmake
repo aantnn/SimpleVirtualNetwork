@@ -26,6 +26,11 @@ endfunction()
 
 get_openssl_target(OPENSSL_TARGET)
 
+
+if(CMAKE_HOST_WIN32)
+    string(REPLACE "C:/" "/cygdrive/c/" ANDROID_NDK_CYGWIN "${ANDROID_NDK}")
+endif ()
+
 include(${CMAKE_CURRENT_LIST_DIR}/CommonAndroidSetup.cmake)
 get_autoconf_target(AUTOCONF_TARGET)
 
