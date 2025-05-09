@@ -45,6 +45,14 @@ clone_if_not_exists(
 )
 
 # Find required packages
+if(CMAKE_HOST_WIN32)
+        find_package(Cygwin REQUIRED)
+        if(CYGWIN_FOUND)
+                message(STATUS "Cygwin found at: ${CYGWIN_INSTALL_DIR}")
+                message(STATUS "Cygwin bin directory: ${CYGWIN_BIN_DIR}")
+                message(STATUS "Cygwin bash executable: ${CYGWIN_EXECUTABLE}")
+        endif()
+endif()
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(libsodium REQUIRED)
