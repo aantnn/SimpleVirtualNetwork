@@ -34,6 +34,23 @@ else ()
     set(android_env "${android_env} ${ENV_SETTER} PATH=\"${ANDROID_TOOLCHAIN_ROOT}/bin:$ENV{PATH}\" \n")
 endif()
 
+if(CMAKE_HOST_WIN32)
+    file(WRITE ${CMAKE_BINARY_DIR}/configure_env.bat
+            "@echo off
+                setlocal enabledelayedexpansion
+                ${android_env}
+            ${CMAKE_COMMAND} -E env %*" )
+    set(ENV_SCRIPT_CMD "${CMAKE_BINARY_DIR}/configure_env.bat")
+else()
+    file(WRITE ${CMAKE_BINARY_DIR}/configure_env.sh
+            "#!/bin/bash
+                ${android_env}
+            ${CMAKE_COMMAND} -E env $@
+exit $?")
+    execute_process(COMMAND chmod +x ${CMAKE_BINARY_DIR}/configure_env.sh)
+    set(ENV_SCRIPT_CMD "${CMAKE_BINARY_DIR}/configure_env.sh")
+endif()
+
 
 function(log_error error command args dir )
     string(REPLACE ";" "\ " command_print "${command}")
@@ -82,6 +99,8 @@ function(build_external target src_dir)
 endfunction()
 
 
+
+
 function(build_autoconf_external_project project source_dir env configure_cmd build_args install_args cmake_args )
     set(AUTOCONF_CURRENT_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/external/${project}")
     set(SUPER_BUILD_DIR ${AUTOCONF_CURRENT_BUILD_DIR} PARENT_SCOPE)
@@ -108,24 +127,7 @@ function(build_autoconf_external_project project source_dir env configure_cmd bu
     file(COPY "${source_dir}" DESTINATION "${AUTOCONF_CURRENT_BUILD_DIR}/..")
     # The %PATH% semicolon issue in ExternalProject_Add is particularly stubborn on Windows so
     # Determine host platform and create appropriate environment script
-    if(CMAKE_HOST_WIN32)
-        # Windows host - create batch script
-        file(WRITE ${CMAKE_BINARY_DIR}/configure_env.bat
-                "@echo off
-                setlocal enabledelayedexpansion
-                ${android_env}
-                ${CMAKE_COMMAND} -E env %*" )
-        set(ENV_SCRIPT_CMD "${CMAKE_BINARY_DIR}/configure_env.bat")
-    else()
-        # Linux/Mac host - create bash script
-        file(WRITE ${CMAKE_BINARY_DIR}/configure_env.sh
-                "#!/bin/bash
-                ${android_env}
-                ${CMAKE_COMMAND} -E env $@"
-exit $?")
-        execute_process(COMMAND chmod +x ${CMAKE_BINARY_DIR}/configure_env.sh)
-        set(ENV_SCRIPT_CMD "${CMAKE_BINARY_DIR}/configure_env.sh")
-    endif()
+
 
     build_external(
             "${project}_${ANDROID_ABI}"
