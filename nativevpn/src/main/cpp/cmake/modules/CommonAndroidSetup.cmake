@@ -14,30 +14,71 @@ endfunction()
 
 get_autoconf_target(AUTOCONF_TARGET)
 
-set(android_env "ANDROID_NDK_ROOT=${ANDROID_NDK}"
-    "CC=${ANDROID_TOOLCHAIN_ROOT}/bin/${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang"
-    "AR=${ANDROID_TOOLCHAIN_ROOT}/bin/llvm-ar"
-    "AS=${ANDROID_TOOLCHAIN_ROOT}/bin/${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang"
-    "CXX=${ANDROID_TOOLCHAIN_ROOT}/bin/${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang++"
-    "LD=${ANDROID_TOOLCHAIN_ROOT}/bin/ld"
-    "RANLIB=${ANDROID_TOOLCHAIN_ROOT}/bin/llvm-ranlib"
-    "STRIP=${ANDROID_TOOLCHAIN_ROOT}/bin/llvm-strip"
-    "PATH=${ANDROID_TOOLCHAIN_ROOT}/bin:$ENV{PATH}")
+if(CMAKE_HOST_WIN32)
+    set(ENV_SETTER "set")
+else ()
+    set(ENV_SETTER "export")
+endif()
+
+
+set(android_env "${android_env} ${ENV_SETTER} CC=${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang\n")
+set(android_env "${android_env} ${ENV_SETTER} AR=llvm-ar\n")
+set(android_env "${android_env} ${ENV_SETTER} AS=${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang\n")
+set(android_env "${android_env} ${ENV_SETTER} CXX=${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang++\n")
+set(android_env "${android_env} ${ENV_SETTER} LD=ld\n")
+set(android_env "${android_env} ${ENV_SETTER} RANLIB=llvm-ranlib\n")
+set(android_env "${android_env} ${ENV_SETTER} STRIP=llvm-strip\n")
+if(CMAKE_HOST_WIN32)
+    if(ANDROID_NDK_CYGWIN)
+        set(android_env "${android_env} ${ENV_SETTER} ANDROID_NDK_ROOT=${ANDROID_NDK_CYGWIN}\n")
+    else()
+        set(android_env "${android_env} ${ENV_SETTER} ANDROID_NDK_ROOT=${ANDROID_NDK}\n")
+    endif ()
+    set(android_env "${android_env} ${ENV_SETTER} PATH=${ANDROID_TOOLCHAIN_ROOT}/bin;$ENV{PATH}\n")
+else ()
+    set(android_env "${android_env} ${ENV_SETTER} ANDROID_NDK_ROOT=${ANDROID_NDK}\n")
+    set(android_env "${android_env} ${ENV_SETTER} PATH=\"${ANDROID_TOOLCHAIN_ROOT}/bin:$ENV{PATH}\"\n")
+endif()
+
+# The %PATH% semicolon issue in ExternalProject_Add is particularly stubborn on Windows so
+# Determine host platform and create appropriate environment script
+if(CMAKE_HOST_WIN32)
+    file(WRITE ${CMAKE_BINARY_DIR}/configure_env.bat
+            "@echo off
+                setlocal enabledelayedexpansion
+                ${android_env}
+            ${CMAKE_COMMAND} -E env %*" )
+    set(ENV_SCRIPT_CMD "${CMAKE_BINARY_DIR}/configure_env.bat")
+else()
+    file(WRITE ${CMAKE_BINARY_DIR}/configure_env.sh
+            "#!/bin/bash
+                ${android_env}
+            ${CMAKE_COMMAND} -E env $@
+exit $?")
+    execute_process(COMMAND chmod +x ${CMAKE_BINARY_DIR}/configure_env.sh)
+    set(ENV_SCRIPT_CMD "${CMAKE_BINARY_DIR}/configure_env.sh")
+endif()
+
 
 function(log_error error command args dir )
     string(REPLACE ";" "\ " command_print "${command}")
     string(REPLACE ";" "\ " args_print "${args}")
-    message (SEND_ERROR "BUILD FAILED AT: ${dir}")
-    message (SEND_ERROR "COMMAND: ${command_print} \\ ${args_print}")
-    message(FATAL_ERROR "Function Build_external command output:\n\
-    ${error}")
+    message(FATAL_ERROR "Build failed:
+${dir}
+Command: ${command_print} ${args_print}
+OUTPUT [EXTERNAL]:
+${error}
+[EOF]")
 endfunction()
 
 
 function(build_external target src_dir)
-    message(STATUS "Building external project: ${target} in: ${src_dir} ")
+    message(STATUS "Building external project:
+ ${target}
+ At: ${src_dir} ")
     set(trigger_build_dir "${src_dir}")
-
+    # Generate a batch file to handle the PATH properly
+    #"${CMAKE_BINARY_DIR}/configure_env.bat"
     set(CMAKE_LIST_CONTENT "
         cmake_minimum_required(VERSION 3.22.1)
         project(${target})
@@ -51,23 +92,34 @@ function(build_external target src_dir)
 
     execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_ARGS} .
             WORKING_DIRECTORY ${trigger_build_dir}
+            OUTPUT_VARIABLE cmd_output
             RESULT_VARIABLE result
             ERROR_VARIABLE error
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_STRIP_TRAILING_WHITESPACE
     )
     if(NOT result EQUAL "0")
-        log_error("${error}" "${CMAKE_COMMAND}" "${CMAKE_ARGS}" "${trigger_build_dir}")
+        log_error("${cmd_output} ${error}" "${CMAKE_COMMAND}" "${CMAKE_ARGS}" "${trigger_build_dir}")
     endif()
+    message("Configure [EXTERNAL]
+${cmd_output}\n[EOF]")
 
     execute_process(COMMAND ${CMAKE_COMMAND} --build .
             WORKING_DIRECTORY ${trigger_build_dir}
+            OUTPUT_VARIABLE cmd_output
             RESULT_VARIABLE result
             ERROR_VARIABLE error
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_STRIP_TRAILING_WHITESPACE
     )
     if(NOT result EQUAL "0")
-        message(WARNING "CMAKE ${CMAKE_CURRENT_BINARY_DIR}/openssl/..")
-        log_error("${error}" "${CMAKE_COMMAND}" "--build ." "${trigger_build_dir}")
+        log_error("${cmd_output} ${error}" "${CMAKE_COMMAND}" "--build ." "${trigger_build_dir}")
     endif()
+    message("Build [EXTERNAL]
+${cmd_output}\n[EOF]")
 endfunction()
+
+
 
 
 function(build_autoconf_external_project project source_dir env configure_cmd build_args install_args cmake_args )
@@ -88,19 +140,27 @@ function(build_autoconf_external_project project source_dir env configure_cmd bu
             -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -B${AUTOCONF_CURRENT_BUILD_DIR}
-            #-DCMAKE_C_FLAGS="${CMAKE_C_FLAGS}"
             -G${CMAKE_GENERATOR}
+            #-DCMAKE_C_FLAGS="${CMAKE_C_FLAGS}"
+
     )
-    message(STATUS "NECESSARY Copy reason: BUILD_IN_SOURCE 1. From ${project} sources to make by Superbuild ExternalProject to ${AUTOCONF_CURRENT_BUILD_DIR}")
+    if (CMAKE_HOST_WIN32) #fix "slashes"
+        string(REPLACE "\\" "/" CMAKE_ARGS "${CMAKE_ARGS}")
+    endif ()
+    message(STATUS "Superbuild ExternalProject: BUILD_IN_SOURCE 1
+ Copy from: ${source_dir}
+ To: ${AUTOCONF_CURRENT_BUILD_DIR}")
     file(COPY "${source_dir}" DESTINATION "${AUTOCONF_CURRENT_BUILD_DIR}/..")
+
+
     build_external(
             "${project}_${ANDROID_ABI}"
             ${AUTOCONF_CURRENT_BUILD_DIR}
-            " SOURCE_DIR ${AUTOCONF_CURRENT_BUILD_DIR} "
+            " SOURCE_DIR        ${AUTOCONF_CURRENT_BUILD_DIR} "
             " BUILD_IN_SOURCE 1 "
-            " CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env ${android_env} ${configure_cmd}"
-            " BUILD_COMMAND ${CMAKE_COMMAND} -E env ${android_env} make -j${NPROC} ${build_args} "
-            " INSTALL_COMMAND ${CMAKE_COMMAND} -E env ${android_env} make -j${NPROC} ${install_args} "
-            " CMAKE_ARGS ${CMAKE_ARGS} "
+            " CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} ${configure_cmd}"
+            " BUILD_COMMAND     ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j${NPROC} ${build_args} "
+            " INSTALL_COMMAND   ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j${NPROC} ${install_args} "
+            " CMAKE_ARGS        ${CMAKE_ARGS} "
     )
 endfunction()

@@ -26,6 +26,11 @@ endfunction()
 
 get_openssl_target(OPENSSL_TARGET)
 
+
+if(CMAKE_HOST_WIN32)
+    string(REPLACE "C:/" "/cygdrive/c/" ANDROID_NDK_CYGWIN "${ANDROID_NDK}")
+endif ()
+
 include(${CMAKE_CURRENT_LIST_DIR}/CommonAndroidSetup.cmake)
 get_autoconf_target(AUTOCONF_TARGET)
 
@@ -36,19 +41,21 @@ set(openssl_configure_flags
 
 set(OPENSSL_CONFIGURE_COMMAND
         cd "<SOURCE_DIR>" &&
-        ${CMAKE_COMMAND} -E env ${android_env} "<SOURCE_DIR>/Configure" ${openssl_configure_flags}
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} perl "<SOURCE_DIR>/Configure" ${openssl_configure_flags}
         "--prefix=<INSTALL_DIR>")
 set(OPENSSL_BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env ${android_env} make -j${NPROC} -sC "<SOURCE_DIR>" build_libs)
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" build_libs)
 set(OPENSSL_INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env ${android_env} make -j${NPROC} -sC "<SOURCE_DIR>" install_dev install_runtime)
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" install_dev install_runtime)
 
 
 #BUILD_IN_SOURCE 1 SO COPY
 if (DEFINED OPENSSL_SOURCE_DIR AND EXISTS ${OPENSSL_SOURCE_DIR})
-    message(STATUS "NECESSARY Copy of sources. Reason: BUILD_IN_SOURCE 1 ExternalProject(openssl")
-    set(COPY_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/openssl/")
-    file(COPY "${OPENSSL_SOURCE_DIR}" DESTINATION "${COPY_SRC_DIR}/..")
+    set(COPY_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/openssl")
+    message(STATUS "Superbuild ExternalProject: BUILD_IN_SOURCE 1
+ Copy from: ${OPENSSL_SOURCE_DIR}
+ To: ${COPY_SRC_DIR}/..")
+    file(COPY "${OPENSSL_SOURCE_DIR}" DESTINATION "${COPY_SRC_DIR}/..") # The /.. is for overwriting the same dir name
     ExternalProject_Add(openssl
             SOURCE_DIR ${COPY_SRC_DIR}
             PREFIX ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
@@ -77,16 +84,16 @@ ExternalProject_Get_Property(openssl SOURCE_DIR)
 set(OPENSSL_CRYPTO_LIBRARY "${INSTALL_DIR}/lib/libcrypto.so")
 set(OPENSSL_SSL_LIBRARY "${INSTALL_DIR}/lib/libssl.so")
 
-message(WARNING "Generating headers due to CMake and Ninja build system limitations in External build prioritization 
-https://discourse.cmake.org/t/design-cmake-projects-with-autocode-generators/9011/2")
+message(WARNING "Generating headers due to CMake and Ninja build system limitations in External build prioritization https://discourse.cmake.org/t/design-cmake-projects-with-autocode-generators/9011/2")
 set(openssl_configure_flags
-        ./Configure
+        perl ./Configure
         ${OPENSSL_TARGET}
         --prefix=${CMAKE_CURRENT_SOURCE_DIR}/build
         -D__ANDROID_API__=${ANDROID_NATIVE_API_LEVEL}
         -fPIC shared no-ui no-ui-console no-engine no-filenames)
 build_autoconf_external_project(openssl "${OPENSSL_SOURCE_DIR}" "" "${openssl_configure_flags}" "build_generated" "build_generated" "")
 # Ninja does not respect byproducts with headers. It behaves like they already there
+
 set(OPENSSL_INCLUDE_DIR "${SUPER_BUILD_DIR}/include;${INSTALL_DIR}/include")
 set(OPENSSL_INSTALL_PREFIX "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
