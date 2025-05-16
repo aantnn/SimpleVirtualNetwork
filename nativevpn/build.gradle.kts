@@ -76,8 +76,6 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    ndkVersion = "28.0.13004108"
-    buildToolsVersion = "36.0.0"
 }
 
 dependencies {

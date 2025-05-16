@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "ru.valishin.vpnoverhttps"
-    compileSdk = 35
+    compileSdk = 36
     packaging {
         jniLibs {
             useLegacyPackaging = true
