@@ -12,10 +12,10 @@ index 0a622ab..17ea9d3 100644
  
  # We define a dedicated variable because CMAKE_BUILD_TYPE can have different
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index c49a3c7..7b36846 100644
+index c49a3c7..a30dc0e 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -135,41 +135,12 @@ add_subdirectory(Cedar)
+@@ -135,42 +135,12 @@ add_subdirectory(Cedar)
  # Mayaqua kernel
  add_subdirectory(Mayaqua)
  
@@ -30,11 +30,11 @@ index c49a3c7..7b36846 100644
 -
 -# vpncmd
 -add_subdirectory(vpncmd)
- 
+-
 -# vpntest
 -add_subdirectory(vpntest)
 -
--# libhamcore
+ # libhamcore
  add_subdirectory(libhamcore)
  
 -# hamcorebuilder utility
@@ -54,9 +54,10 @@ index c49a3c7..7b36846 100644
 -  WORKING_DIRECTORY "${BUILD_DIRECTORY}"
 -  VERBATIM
 -)
- 
+-
  if(WIN32)
    # PenCore
+   add_subdirectory(PenCore)
 diff --git a/src/Cedar/CMakeLists.txt b/src/Cedar/CMakeLists.txt
 index 7818d79..49ecdaf 100644
 --- a/src/Cedar/CMakeLists.txt
@@ -93,7 +94,7 @@ index 7818d79..49ecdaf 100644
  target_include_directories(cedar PUBLIC ${BLAKE2_SRC_PATH})
  target_sources(cedar PRIVATE ${BLAKE2_SRC})
 diff --git a/src/Cedar/Console.c b/src/Cedar/Console.c
-index 45bab42..57d1fd1 100644
+index 45bab42..9097ff4 100644
 --- a/src/Cedar/Console.c
 +++ b/src/Cedar/Console.c
 @@ -28,9 +28,14 @@
@@ -147,7 +148,7 @@ index 51acec0..7477339 100644
  
  if (HAVE_SSL_CTX_SET_NUM_TICKETS)
 diff --git a/src/Mayaqua/FileIO.c b/src/Mayaqua/FileIO.c
-index 5e4b9c9..69a01f6 100644
+index 5e4b9c9..ad420ba 100644
 --- a/src/Mayaqua/FileIO.c
 +++ b/src/Mayaqua/FileIO.c
 @@ -18,6 +18,10 @@
@@ -195,7 +196,7 @@ index 5e4b9c9..69a01f6 100644
  	GetExeDir(name, size);
  #endif
 diff --git a/src/Mayaqua/Mayaqua.c b/src/Mayaqua/Mayaqua.c
-index 8649275..ac8ee97 100644
+index 8649275..f75ebbc 100644
 --- a/src/Mayaqua/Mayaqua.c
 +++ b/src/Mayaqua/Mayaqua.c
 @@ -22,6 +22,10 @@
@@ -250,7 +251,7 @@ index 8649275..ac8ee97 100644
  }
  
 diff --git a/src/Mayaqua/Unix.c b/src/Mayaqua/Unix.c
-index 0c3778d..a819bd4 100755
+index 0c3778d..f40a8d1 100755
 --- a/src/Mayaqua/Unix.c
 +++ b/src/Mayaqua/Unix.c
 @@ -80,6 +80,10 @@ struct statfs {
@@ -279,15 +280,14 @@ index 0c3778d..a819bd4 100755
  	if (argc >= 2 && StrCmpi(argv[1], UNIX_SVC_ARG_EXEC_SVC) == 0)
  	{
  		UINT pid;
-@@ -2786,7 +2798,7 @@ RESTART_PROCESS:
- 		// Start normally
- 		UnixServiceMain(argc, argv, name, start, stop);
+@@ -2768,6 +2780,7 @@ RESTART_PROCESS:
+ 			}
+ 		}
  	}
--
 +#endif
- 	return 0;
- }
- void UnixServiceMain(int argc, char *argv[], char *name, SERVICE_FUNCTION *start, SERVICE_FUNCTION *stop)
+ 	else if (argc >= 3 && StrCmpi(argv[1], UNIX_SVC_ARG_START) == 0 && StrCmpi(argv[2], UNIX_SVC_ARG_FOREGROUND) == 0)
+ 	{
+ #ifdef DEBUG
 diff --git a/src/vpnclient/CMakeLists.txt b/src/vpnclient/CMakeLists.txt
 index 528a637..957bf79 100644
 --- a/src/vpnclient/CMakeLists.txt
@@ -304,7 +304,7 @@ index 528a637..957bf79 100644
  
  set_target_properties(vpnclient
 diff --git a/src/vpnclient/vpncsvc.c b/src/vpnclient/vpncsvc.c
-index 74d6da0..94bc87c 100644
+index 74d6da0..c1df612 100644
 --- a/src/vpnclient/vpncsvc.c
 +++ b/src/vpnclient/vpncsvc.c
 @@ -43,4 +43,10 @@ int main(int argc, char *argv[])
