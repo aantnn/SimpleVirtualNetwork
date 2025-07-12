@@ -66,17 +66,14 @@ index c49a3c7..a7a8ec3 100644
    # PenCore
    add_subdirectory(PenCore)
 diff --git a/src/Cedar/CMakeLists.txt b/src/Cedar/CMakeLists.txt
-index 7818d79..6b83b43 100644
+index 7818d79..49ecdaf 100644
 --- a/src/Cedar/CMakeLists.txt
 +++ b/src/Cedar/CMakeLists.txt
-@@ -21,10 +21,28 @@ set_target_properties(cedar
+@@ -21,10 +21,27 @@ set_target_properties(cedar
  
  target_link_libraries(cedar PUBLIC mayaqua)
  
 -cmake_host_system_information(RESULT HAS_SSE2 QUERY HAS_SSE2)
- 
--set(BLAKE2_SRC_PATH $<IF:$<BOOL:${HAS_SSE2}>,${TOP_DIRECTORY}/3rdparty/BLAKE2/sse,${TOP_DIRECTORY}/3rdparty/BLAKE2/ref>)
--set(BLAKE2_SRC $<IF:$<BOOL:${HAS_SSE2}>,${BLAKE2_SRC_PATH}/blake2s.c,${BLAKE2_SRC_PATH}/blake2s-ref.c>)
 +if(ANDROID_ABI STREQUAL "arm64-v8a")
 +    set(HAS_NEON TRUE)
 +elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
@@ -87,7 +84,9 @@ index 7818d79..6b83b43 100644
 +    include(CheckIncludeFiles)
 +    check_include_files("emmintrin.h" HAS_SSE2)
 +endif()
-+
+ 
+-set(BLAKE2_SRC_PATH $<IF:$<BOOL:${HAS_SSE2}>,${TOP_DIRECTORY}/3rdparty/BLAKE2/sse,${TOP_DIRECTORY}/3rdparty/BLAKE2/ref>)
+-set(BLAKE2_SRC $<IF:$<BOOL:${HAS_SSE2}>,${BLAKE2_SRC_PATH}/blake2s.c,${BLAKE2_SRC_PATH}/blake2s-ref.c>)
 +if(HAS_SSE2)
 +    set(BLAKE2_SRC_PATH ${TOP_DIRECTORY}/3rdparty/BLAKE2/sse)
 +    set(BLAKE2_SRC ${BLAKE2_SRC_PATH}/blake2s.c)
@@ -102,7 +101,7 @@ index 7818d79..6b83b43 100644
  target_include_directories(cedar PUBLIC ${BLAKE2_SRC_PATH})
  target_sources(cedar PRIVATE ${BLAKE2_SRC})
 diff --git a/src/Cedar/Console.c b/src/Cedar/Console.c
-index 45bab42..31dbacf 100644
+index 45bab42..9097ff4 100644
 --- a/src/Cedar/Console.c
 +++ b/src/Cedar/Console.c
 @@ -28,9 +28,14 @@
@@ -113,9 +112,9 @@ index 45bab42..31dbacf 100644
  #include <readline/readline.h>
  #include <readline/history.h>
  #endif
-+#endif
 +#ifdef __ANDROID__
 +#include <androidhelpers.h>
++#endif
 +#endif
  
  // Display the help for the command
@@ -142,47 +141,22 @@ index 45bab42..31dbacf 100644
  			}
  
  			ret = CopyStrToUni(s);
-@@ -2482,4 +2493,3 @@ void ConsoleWriteOutFile(CONSOLE *c, wchar_t *str, bool add_last_crlf)
- 	}
- 
- }
--
 diff --git a/src/Mayaqua/FileIO.c b/src/Mayaqua/FileIO.c
-index 5e4b9c9..90d726e 100644
+index 5e4b9c9..ad420ba 100644
 --- a/src/Mayaqua/FileIO.c
 +++ b/src/Mayaqua/FileIO.c
-@@ -19,6 +19,9 @@
+@@ -18,6 +18,10 @@
+ #include "Unix.h"
  #include "Win32.h"
  
- #include <Hamcore.h>
 +#ifdef __ANDROID__
 +#include <androidhelpers.h>
 +#endif
++
+ #include <Hamcore.h>
  
  static char exe_file_name[MAX_SIZE] = "/tmp/a.out";
- static wchar_t exe_file_name_w[MAX_SIZE] = L"/tmp/a.out";
-@@ -653,7 +656,7 @@ int CompareDirListByName(void *p1, void *p2)
- 	return UniStrCmpi(d1->FileNameW, d2->FileNameW);
- }
- 
--// Release the enumeration of the directory 
-+// Release the enumeration of the directory
- void FreeDir(DIRLIST *d)
- {
- 	UINT i;
-@@ -876,6 +879,11 @@ void GetExeDir(char *name, UINT size)
- 	{
- 		return;
- 	}
-+	#ifdef __ANDROID__
-+	char* tmp = GetAndroidTmpDir();
-+	StrCpy(name, size, tmp);
-+	free(tmp);
-+    #endif
- 
- 	GetDirNameFromFilePath(name, size, exe_file_name);
- }
-@@ -916,6 +924,10 @@ void GetLogDir(char *name, UINT size)
+@@ -916,6 +920,10 @@ void GetLogDir(char *name, UINT size)
  {
  #ifdef SE_LOGDIR
  	Format(name, size, SE_LOGDIR);
@@ -193,7 +167,7 @@ index 5e4b9c9..90d726e 100644
  #else
  	GetExeDir(name, size);
  #endif
-@@ -934,6 +946,10 @@ void GetDbDir(char *name, UINT size)
+@@ -934,6 +942,10 @@ void GetDbDir(char *name, UINT size)
  {
  #ifdef SE_DBDIR
  	Format(name, size, SE_DBDIR);
@@ -204,47 +178,33 @@ index 5e4b9c9..90d726e 100644
  #else
  	GetExeDir(name, size);
  #endif
-@@ -952,6 +968,10 @@ void GetPidDir(char *name, UINT size)
+@@ -952,6 +964,10 @@ void GetPidDir(char *name, UINT size)
  {
  #ifdef SE_PIDDIR
  	Format(name, size, SE_PIDDIR);
 +#elif __ANDROID__
-+    char* tmp = GetAndroidTmpDir();
-+    StrCpy(name, size, tmp);
-+	free(tmp);
++	    char* tmp = GetAndroidTmpDir();
++	    StrCpy(name, size, tmp);
++		free(tmp);
  #else
  	GetExeDir(name, size);
  #endif
-@@ -2176,5 +2196,3 @@ IO *FileOpenExW(wchar_t *name, bool write_mode, bool read_lock)
- 		return FileOpenInnerW(tmp, write_mode, read_lock);
- 	}
- }
--
--
 diff --git a/src/Mayaqua/Mayaqua.c b/src/Mayaqua/Mayaqua.c
-index 8649275..e152e9f 100644
+index 8649275..f75ebbc 100644
 --- a/src/Mayaqua/Mayaqua.c
 +++ b/src/Mayaqua/Mayaqua.c
-@@ -24,6 +24,9 @@
+@@ -22,6 +22,10 @@
+ #include "Tick64.h"
+ #include "Tracking.h"
  
- #include <locale.h>
- #include <stdlib.h>
 +#ifdef __ANDROID__
 +#include <androidhelpers.h>
 +#endif
- 
- // Global variable
- bool g_memcheck;								// Enable memory check
-@@ -152,7 +155,7 @@ void WriteProbe(char *filename, UINT line, char *str)
- 	Lock(probe_lock);
- 	{
- 		UINT64 diff;
--		
 +
- 		time = MsGetHiResTimeSpanUSec(now - probe_start);
+ #include <locale.h>
+ #include <stdlib.h>
  
- 		diff = time - probe_last;
-@@ -622,11 +625,15 @@ void CheckUnixTempDir()
+@@ -622,11 +626,17 @@ void CheckUnixTempDir()
  		UINT64 now = SystemTime64();
  		IO *o;
  
@@ -254,6 +214,8 @@ index 8649275..e152e9f 100644
 +		#else
 +		char* tmpDir = "/tmp";
 +		#endif
++
++		MakeDir(tmpDir);
  
  		Format(tmp2, sizeof(tmp2), "%I64u", now);
  
@@ -262,7 +224,7 @@ index 8649275..e152e9f 100644
  
  		o = FileCreate(tmp);
  		if (o == NULL)
-@@ -634,14 +641,17 @@ void CheckUnixTempDir()
+@@ -634,14 +644,17 @@ void CheckUnixTempDir()
  			o = FileOpen(tmp, false);
  			if (o == NULL)
  			{
@@ -282,73 +244,37 @@ index 8649275..e152e9f 100644
  	}
  }
  
-@@ -1088,7 +1098,3 @@ void PrintDebugInformation()
- 		MemoryDebugMenu();
- 	}
- }
--
--
--
--
 diff --git a/src/Mayaqua/Unix.c b/src/Mayaqua/Unix.c
-index 0c3778d..09868e9 100755
+index 0c3778d..4c692c7 100755
 --- a/src/Mayaqua/Unix.c
 +++ b/src/Mayaqua/Unix.c
-@@ -51,6 +51,10 @@
- #include <sys/statvfs.h>
- #endif
+@@ -80,6 +80,10 @@ struct statfs {
+ #endif	// NO_VLAN
+ #endif	// UNIX_MACOS
  
 +#ifdef __ANDROID__
 +#include <sys/vfs.h>
 +#endif
 +
- #ifdef	UNIX_MACOS
- #ifdef	NO_VLAN
- // Struct statfs for MacOS X
-@@ -116,7 +120,7 @@ int local_scandir(const char *dir, struct dirent ***namelist,
-   if (i == 0) return(-1);
-   if (compar != NULL)
-     qsort((void *)(*namelist), (size_t)i, sizeof(struct dirent *), compar);
--    
-+
-   return(i);
- }
- 
-@@ -1140,7 +1144,7 @@ bool UnixRun(char *filename, char *arg, bool hide, bool wait)
- 			args[i] = t->Token[i - 1];
- 		}
- 	}
--	
-+
- 	// Create a child process
- 	ret = fork();
- 	if (ret == -1)
-@@ -2065,7 +2069,7 @@ UINT64 UnixGetHighresTickNano64(bool raw)
- 
- 	return ret;
- 
--#else	
-+#else
- 	return UnixGetTick64() * 1000000ULL;
- #endif
- }
-@@ -2736,7 +2740,14 @@ UINT UnixService(int argc, char *argv[], char *name, SERVICE_FUNCTION *start, SE
- 	{
+ // Scandir() function for Solaris
+ #ifdef	UNIX_SOLARIS
+ #define scandir local_scandir
+@@ -2737,6 +2741,14 @@ UINT UnixService(int argc, char *argv[], char *name, SERVICE_FUNCTION *start, SE
  		return 0;
  	}
--
+ 
 +#ifdef __ANDROID__
-+		// On Android, directly call UnixServiceMain without forking
-+		if (argc >= 2 && StrCmpi(argv[1], UNIX_SVC_ARG_EXEC_SVC) == 0) {
-+			UnixServiceMain(argc, argv, name, start, stop);
-+		} else {
-+			exit(EXIT_FAILURE);
-+		}
++	// On Android, directly call UnixServiceMain without forking
++	if (argc >= 2 && StrCmpi(argv[1], UNIX_SVC_ARG_EXEC_SVC) == 0) {
++		UnixServiceMain(argc, argv, name, start, stop);
++	} else {
++		exit(EXIT_FAILURE);
++	}
 +#else
  	if (argc >= 2 && StrCmpi(argv[1], UNIX_SVC_ARG_EXEC_SVC) == 0)
  	{
  		UINT pid;
-@@ -2786,7 +2797,7 @@ RESTART_PROCESS:
+@@ -2786,7 +2798,7 @@ RESTART_PROCESS:
  		// Start normally
  		UnixServiceMain(argc, argv, name, start, stop);
  	}
@@ -358,7 +284,7 @@ index 0c3778d..09868e9 100755
  }
  void UnixServiceMain(int argc, char *argv[], char *name, SERVICE_FUNCTION *start, SERVICE_FUNCTION *stop)
 diff --git a/src/vpnclient/CMakeLists.txt b/src/vpnclient/CMakeLists.txt
-index 528a637..d48856a 100644
+index 528a637..957bf79 100644
 --- a/src/vpnclient/CMakeLists.txt
 +++ b/src/vpnclient/CMakeLists.txt
 @@ -19,7 +19,9 @@ if(WIN32)
@@ -368,30 +294,22 @@ index 528a637..d48856a 100644
 -  add_executable(vpnclient "vpncsvc.c")
 +  add_library(vpnclient SHARED
 +    vpncsvc.c
-+)
++  )
  endif()
  
  set_target_properties(vpnclient
 diff --git a/src/vpnclient/vpncsvc.c b/src/vpnclient/vpncsvc.c
-index 74d6da0..da52614 100644
+index 74d6da0..c1df612 100644
 --- a/src/vpnclient/vpncsvc.c
 +++ b/src/vpnclient/vpncsvc.c
-@@ -25,7 +25,7 @@ void StartProcess()
- // Process termination function
- void StopProcess()
- {
--  	// Stop the client
-+	// Stop the client
- 	CtStopClient();
- 	FreeCedar();
- }
-@@ -43,4 +43,8 @@ int main(int argc, char *argv[])
+@@ -43,4 +43,10 @@ int main(int argc, char *argv[])
  #endif	// OS_WIN32
  }
  
--
 +#ifdef __ANDROID__
 +extern int VpnClientMain(int argc, char *argv[]) {
-+	return main(argc,argv);
++    return main(argc,argv);
 +}
 +#endif
++
+ 
