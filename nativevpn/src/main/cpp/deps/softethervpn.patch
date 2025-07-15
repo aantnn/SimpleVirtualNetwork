@@ -59,7 +59,7 @@ index c49a3c7..a30dc0e 100644
    # PenCore
    add_subdirectory(PenCore)
 diff --git a/src/Cedar/CMakeLists.txt b/src/Cedar/CMakeLists.txt
-index 7818d79..57d0a39 100644
+index 7818d79..f350672 100644
 --- a/src/Cedar/CMakeLists.txt
 +++ b/src/Cedar/CMakeLists.txt
 @@ -21,10 +21,27 @@ set_target_properties(cedar
@@ -93,7 +93,7 @@ index 7818d79..57d0a39 100644
  
  target_include_directories(cedar PUBLIC ${BLAKE2_SRC_PATH})
  target_sources(cedar PRIVATE ${BLAKE2_SRC})
-@@ -40,7 +57,8 @@ if(VCPKG_TARGET_TRIPLET)
+@@ -40,10 +57,11 @@ if(VCPKG_TARGET_TRIPLET)
    target_link_libraries(cedar PUBLIC unofficial-sodium::sodium)
  else()
    find_package(PkgConfig REQUIRED)
@@ -102,7 +102,11 @@ index 7818d79..57d0a39 100644
 +  find_package(sodium REQUIRED)
    target_include_directories(cedar PUBLIC ${SODIUM_INCLUDE_DIRS})
    if(NOT ("$ENV{TRAVIS_CPU_ARCH}" STREQUAL ppc64le))
-     target_link_libraries(cedar PUBLIC $<IF:$<BOOL:SODIUM_LINK_LIBRARIES>,${SODIUM_LINK_LIBRARIES},${SODIUM_LIBRARIES}>)
+-    target_link_libraries(cedar PUBLIC $<IF:$<BOOL:SODIUM_LINK_LIBRARIES>,${SODIUM_LINK_LIBRARIES},${SODIUM_LIBRARIES}>)
++    target_link_libraries(cedar PUBLIC  androidhelpers $<IF:$<BOOL:SODIUM_LINK_LIBRARIES>,${SODIUM_LINK_LIBRARIES},${SODIUM_LIBRARIES}>)
+   else()
+     # TODO: investigate why on ppc64le the use of SODIUM_LINK_LIBRARIES causes undefined references to libsodium functions.
+     target_link_libraries(cedar PUBLIC ${SODIUM_LIBRARIES})
 @@ -62,10 +80,10 @@ if(WIN32)
  endif()
  
@@ -159,7 +163,7 @@ index 45bab42..9097ff4 100644
  
  			ret = CopyStrToUni(s);
 diff --git a/src/Mayaqua/CMakeLists.txt b/src/Mayaqua/CMakeLists.txt
-index 51acec0..7477339 100644
+index 51acec0..08ae740 100644
 --- a/src/Mayaqua/CMakeLists.txt
 +++ b/src/Mayaqua/CMakeLists.txt
 @@ -47,7 +47,7 @@ unset(CMAKE_REQUIRED_INCLUDES)
@@ -171,6 +175,14 @@ index 51acec0..7477339 100644
  endif()
  
  if (HAVE_SSL_CTX_SET_NUM_TICKETS)
+@@ -67,6 +67,7 @@ target_link_libraries(mayaqua
+     OpenSSL::SSL
+     OpenSSL::Crypto
+     ZLIB::ZLIB
++    androidhelpers
+ )
+ 
+ if(WIN32)
 diff --git a/src/Mayaqua/FileIO.c b/src/Mayaqua/FileIO.c
 index 5e4b9c9..ad420ba 100644
 --- a/src/Mayaqua/FileIO.c
@@ -275,7 +287,7 @@ index 8649275..f75ebbc 100644
  }
  
 diff --git a/src/Mayaqua/Unix.c b/src/Mayaqua/Unix.c
-index 0c3778d..f40a8d1 100755
+index 0c3778d..3daff40 100755
 --- a/src/Mayaqua/Unix.c
 +++ b/src/Mayaqua/Unix.c
 @@ -80,6 +80,10 @@ struct statfs {
@@ -304,14 +316,14 @@ index 0c3778d..f40a8d1 100755
  	if (argc >= 2 && StrCmpi(argv[1], UNIX_SVC_ARG_EXEC_SVC) == 0)
  	{
  		UINT pid;
-@@ -2768,6 +2780,7 @@ RESTART_PROCESS:
- 			}
- 		}
+@@ -2788,6 +2800,7 @@ RESTART_PROCESS:
  	}
-+#endif
- 	else if (argc >= 3 && StrCmpi(argv[1], UNIX_SVC_ARG_START) == 0 && StrCmpi(argv[2], UNIX_SVC_ARG_FOREGROUND) == 0)
- 	{
- #ifdef DEBUG
+ 
+ 	return 0;
++	#endif
+ }
+ void UnixServiceMain(int argc, char *argv[], char *name, SERVICE_FUNCTION *start, SERVICE_FUNCTION *stop)
+ {
 diff --git a/src/vpnclient/CMakeLists.txt b/src/vpnclient/CMakeLists.txt
 index 528a637..957bf79 100644
 --- a/src/vpnclient/CMakeLists.txt
