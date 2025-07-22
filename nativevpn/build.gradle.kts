@@ -50,7 +50,6 @@ android {
                 //arguments("-DCMAKE_C_FLAGS=-I${project.projectDir.absolutePath}/src/main/cpp/include" )
             }
         }
-        targetSdk = 36
     }
 
 
@@ -76,6 +75,8 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    buildToolsVersion = "36.0.0"
+    ndkVersion = "28.2.13676358"
 }
 
 dependencies {

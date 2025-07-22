@@ -80,7 +80,6 @@ endif ()
 ExternalProject_Get_Property(openssl INSTALL_DIR)
 ExternalProject_Get_Property(openssl SOURCE_DIR)
 
-
 set(OPENSSL_CRYPTO_LIBRARY "${INSTALL_DIR}/lib/libcrypto.so")
 set(OPENSSL_SSL_LIBRARY "${INSTALL_DIR}/lib/libssl.so")
 
@@ -88,25 +87,27 @@ message(WARNING "Generating headers due to CMake and Ninja build system limitati
 set(openssl_configure_flags
         perl ./Configure
         ${OPENSSL_TARGET}
-        --prefix=${CMAKE_CURRENT_SOURCE_DIR}/build
+        --prefix=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         -D__ANDROID_API__=${ANDROID_NATIVE_API_LEVEL}
         -fPIC shared no-ui no-ui-console no-engine no-filenames)
-build_autoconf_external_project(openssl "${OPENSSL_SOURCE_DIR}" "" "${openssl_configure_flags}" "build_generated" "build_generated" "")
+build_autoconf_external_project(openssl "${COPY_SRC_DIR}" "" "${openssl_configure_flags}" "build_generated" "build_generated" "")
+file(COPY "${COPY_SRC_DIR}/include/openssl" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/include/")
+file(COPY "${COPY_SRC_DIR}/include/crypto" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/include/")
 # Ninja does not respect byproducts with headers. It behaves like they already there
 
-set(OPENSSL_INCLUDE_DIR "${SUPER_BUILD_DIR}/include;${INSTALL_DIR}/include")
+set(OPENSSL_INCLUDE_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/include;${INSTALL_DIR}/include")
 set(OPENSSL_INSTALL_PREFIX "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
 file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
 #file(MAKE_DIRECTORY ${INSTALL_DIR}/lib)
 
-set(OPENSSL_DIR ${INSTALL_DIR} PARENT_SCOPE)
+set(OPENSSL_DIR ${INSTALL_DIR} CACHE INTERNAL "")
 
 add_library(OpenSSL::Crypto UNKNOWN IMPORTED)
 add_dependencies(OpenSSL::Crypto openssl)
 set_target_properties(OpenSSL::Crypto PROPERTIES
         IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-        INTERFACE_INCLUDE_DIRECTORIES "${SOURCE_DIR}/include;${INSTALL_DIR}/include"
+        INTERFACE_INCLUDE_DIRECTORIES "${INSTALL_DIR}/include"
         IMPORTED_LOCATION "${INSTALL_DIR}/lib/libcrypto.so")
 
 add_library(OpenSSL::SSL UNKNOWN IMPORTED)
@@ -114,7 +115,7 @@ add_dependencies(OpenSSL::SSL openssl)
 set_target_properties(OpenSSL::SSL PROPERTIES
         IMPORTED_LINK_INTERFACE_LANGUAGES "C"
         #INTERFACE_INCLUDE_DIRECTORIES "${INSTALL_DIR}/include"
-        INTERFACE_INCLUDE_DIRECTORIES "${SOURCE_DIR}/include;${INSTALL_DIR}/include"
+        INTERFACE_INCLUDE_DIRECTORIES "${INSTALL_DIR}/include"
         IMPORTED_LOCATION "${INSTALL_DIR}/lib/libssl.so")
 
 include(FindPackageHandleStandardArgs)

@@ -47,6 +47,8 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
     }
+    buildToolsVersion = "36.0.0"
+    ndkVersion = "28.2.13676358"
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

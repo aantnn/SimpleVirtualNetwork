@@ -123,7 +123,8 @@ endfunction()
 
 
 function(build_autoconf_external_project project source_dir env configure_cmd build_args install_args cmake_args )
-    set(AUTOCONF_CURRENT_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/external/${project}")
+    #set(AUTOCONF_CURRENT_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/external/${project}")
+    set(AUTOCONF_CURRENT_BUILD_DIR "${source_dir}")
     set(SUPER_BUILD_DIR ${AUTOCONF_CURRENT_BUILD_DIR} PARENT_SCOPE)
     set(CMAKE_ARGS
             -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
@@ -147,10 +148,12 @@ function(build_autoconf_external_project project source_dir env configure_cmd bu
     if (CMAKE_HOST_WIN32) #fix "slashes"
         string(REPLACE "\\" "/" CMAKE_ARGS "${CMAKE_ARGS}")
     endif ()
+#[[
     message(STATUS "Superbuild ExternalProject: BUILD_IN_SOURCE 1
  Copy from: ${source_dir}
  To: ${AUTOCONF_CURRENT_BUILD_DIR}")
     file(COPY "${source_dir}" DESTINATION "${AUTOCONF_CURRENT_BUILD_DIR}/..")
+]]
 
 
     build_external(

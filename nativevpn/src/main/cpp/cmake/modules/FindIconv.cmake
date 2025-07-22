@@ -16,12 +16,12 @@ set(configure_flags
 
 set(CONFIGURE_COMMAND
         cd "<SOURCE_DIR>" &&
-        ${CMAKE_COMMAND} -E env ${android_env} "<SOURCE_DIR>/configure" ${configure_flags}
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} "<SOURCE_DIR>/configure" ${configure_flags}
         "--prefix=<INSTALL_DIR>")
 set(BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env ${android_env} make -j${NPROC} -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" install)
 set(INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env ${android_env} make -j${NPROC} -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" install)
 
 #BUILD_IN_SOURCE 1 SO COPY
 if (DEFINED ICONV_SOURCE_DIR AND EXISTS ${ICONV_SOURCE_DIR})
@@ -55,7 +55,7 @@ ExternalProject_Get_Property(libiconv SOURCE_DIR)
 file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
 #file(MAKE_DIRECTORY ${INSTALL_DIR}/lib)
 # Set the variables
-set(ICONV_INCLUDE_DIR "${SOURCE_DIR}/include;${INSTALL_DIR}/include")
+set(ICONV_INCLUDE_DIR "${INSTALL_DIR}/include")
 set(ICONV_LIBRARY ${INSTALL_DIR}/lib/libiconv.so)
 set(LIB_ICONV ${INSTALL_DIR}/lib/libiconv.so)
 

@@ -20,8 +20,20 @@ foreach(LINE ${DEPS_LINES})
         endif()
 endforeach()
 
-# OpenSSL configuration
 
+find_package(Perl REQUIRED)
+execute_process(
+        COMMAND ${PERL_EXECUTABLE} -MFindBin -MIPC::Cmd -MFile::Compare -MFile::Copy -e "print \"Perl modules available\\n\""
+        RESULT_VARIABLE perl_module_check
+        OUTPUT_QUIET
+        ERROR_QUIET
+)
+if(NOT perl_module_check EQUAL "0")
+        message(FATAL_ERROR "Missing required Perl modules: FindBin, IPC::Cmd, File::Compare, and/or File::Copy")
+endif()
+
+
+# OpenSSL configuration
 set(OPENSSL_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/openssl)
 download_and_extract("${OPENSSL_URL}" "${OPENSSL_SHA}" "${OPENSSL_SOURCE_DIR}")
 
@@ -55,7 +67,9 @@ if(CMAKE_HOST_WIN32)
 endif()
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_package(libsodium REQUIRED)
+set(HAVE_EVP_PKEY_GET_RAW_PUBLIC_KEY TRUE CACHE BOOL "Override OpenSSL symbol check")
+set(HAVE_SSL_CTX_SET_NUM_TICKETS TRUE CACHE BOOL "Override OpenSSL symbol check")
+find_package(sodium REQUIRED)
 find_package(Iconv REQUIRED)
 
 # Build HamCore
@@ -67,12 +81,23 @@ build_hamcore_se2(
 
 # Apply SoftEther VPN patch
 execute_process(
-        COMMAND git apply "${CMAKE_CURRENT_SOURCE_DIR}/deps/softethervpn.patch"
+        COMMAND ${GIT_EXECUTABLE} apply --reverse --check "${CMAKE_CURRENT_SOURCE_DIR}/deps/softethervpn.patch"
         WORKING_DIRECTORY "${SOFTETHERVPN_SOURCE_DIR}"
-        RESULT_VARIABLE git_result
+        RESULT_VARIABLE git_reverse_check
+        OUTPUT_QUIET
+        ERROR_QUIET
 )
-if(NOT git_result EQUAL "0")
-        #message(FATAL_ERROR "git apply patch")
+if(NOT git_reverse_check EQUAL "0")
+        #[[execute_process(
+                COMMAND ${GIT_EXECUTABLE} apply "${CMAKE_CURRENT_SOURCE_DIR}/deps/softethervpn.patch"
+                WORKING_DIRECTORY "${SOFTETHERVPN_SOURCE_DIR}"
+                RESULT_VARIABLE git_apply_result
+                ERROR_VARIABLE git_error_output
+        )
+
+        if(NOT git_apply_result EQUAL "0")
+                message(FATAL_ERROR "Failed to apply patch:\n${git_error_output}")
+        endif()]]
 endif()
 
 # Curses configuration
@@ -86,13 +111,16 @@ list(APPEND CMAKE_MODULE_PATH "${SOFTETHERVPN_SOURCE_DIR}/src/Mayaqua/3rdparty")
 # Build configuration
 set(CMAKE_VERBOSE_MAKEFILE ON)
 cmake_host_system_information(RESULT nproc QUERY NUMBER_OF_PHYSICAL_CORES)
-set(NPROC ${nproc})
+set(NPROC 1  CACHE INTERNAL "")
 
 # Android helpers library
 add_library(androidhelpers INTERFACE)
-target_include_directories(androidhelpers INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_compile_definitions(androidhelpers INTERFACE)
-
+target_include_directories(androidhelpers INTERFACE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+target_sources(androidhelpers INTERFACE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/androidhelpers.h"
+)
 # Add SoftEther VPN subdirectory
 add_subdirectory("${SOFTETHERVPN_SOURCE_DIR}")
 
@@ -114,5 +142,3 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
         cedar
         vpnclient
 )
-
-
