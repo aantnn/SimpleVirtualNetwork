@@ -68,7 +68,4 @@ add_custom_command(
     add_custom_target(hamcore-archive ALL
         DEPENDS "${BUILD_DIRECTORY}/${HAMCORE_SE2_FILENAME}"
     )
-
-    # Make the output available
-    set(HAMCORE_ARCHIVE_PATH "${BUILD_DIRECTORY}/${HAMCORE_SE2_FILENAME}" PARENT_SCOPE)
 endfunction()

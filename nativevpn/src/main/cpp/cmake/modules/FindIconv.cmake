@@ -13,7 +13,6 @@ set(configure_flags
         --host=${AUTOCONF_TARGET}
         --enable-shared)
 
-
 set(CONFIGURE_COMMAND
         cd "<SOURCE_DIR>" &&
         ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} "<SOURCE_DIR>/configure" ${configure_flags}
@@ -76,4 +75,32 @@ find_package_handle_standard_args(Iconv
 set(Iconv_INCLUDE_DIRS ${ICONV_INCLUDE_DIR})
 set(Iconv_LIBRARIES ${ICONV_LIBRARY})
 set(Iconv_FOUND ${ICONV_FOUND})
+
+
+function(get_current_stack_targets output_var)
+    get_property(targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    set(${output_var} ${targets} PARENT_SCOPE)
+endfunction()
+
+function(add_dependency_to_stack_targets )
+    get_current_stack_targets(TARGETS)
+    foreach(target ${TARGETS})
+        if ("${target}" STREQUAL "iconv")
+            message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
+        endif()
+        add_dependencies(${target} libiconv)
+    endforeach()
+endfunction()
+
+function(watch_deprecated_stack_usage var access value current_list_file stack)
+    if(access STREQUAL "READ_ACCESS")
+        add_dependency_to_stack_targets(${stack})
+    endif()
+endfunction()
+variable_watch(Iconv_INCLUDE_DIRS watch_deprecated_stack_usage)
+variable_watch(Iconv_LIBRARIES watch_deprecated_stack_usage)
+variable_watch(Iconv_FOUND watch_deprecated_stack_usage)
+variable_watch(ICONV_INCLUDE_DIR watch_deprecated_stack_usage)
+variable_watch(ICONV_LIBRARY watch_deprecated_stack_usage)
+variable_watch(LIB_ICONV watch_deprecated_stack_usage)
 

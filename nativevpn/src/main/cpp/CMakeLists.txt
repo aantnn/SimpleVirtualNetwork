@@ -112,7 +112,7 @@ list(APPEND CMAKE_MODULE_PATH "${SOFTETHERVPN_SOURCE_DIR}/src/Mayaqua/3rdparty")
 # Build configuration
 set(CMAKE_VERBOSE_MAKEFILE ON)
 cmake_host_system_information(RESULT nproc QUERY NUMBER_OF_PHYSICAL_CORES)
-set(NPROC 1  CACHE INTERNAL "")
+
 
 # Android helpers library
 add_library(androidhelpers INTERFACE)
