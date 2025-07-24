@@ -1,11 +1,40 @@
+function(get_current_stack_targets output_var)
+    get_property(targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    set(${output_var} ${targets} PARENT_SCOPE)
+endfunction()
+
+function(add_dependency_to_stack_targets )
+    get_current_stack_targets(TARGETS)
+    foreach(target ${TARGETS})
+        if ("${target}" STREQUAL "openssl")
+            message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
+        endif()
+        message(WARNING "TARGET ${target}")
+        add_dependencies(${target} openssl)
+    endforeach()
+endfunction()
+
+function(watch_deprecated_stack_usage var access value current_list_file stack)
+    if(access STREQUAL "READ_ACCESS")
+        add_dependency_to_stack_targets(${stack})
+    endif()
+endfunction()
+
+variable_watch(OPENSSL_CRYPTO_LIBRARY watch_deprecated_stack_usage)
+variable_watch(OPENSSL_SSL_LIBRARY watch_deprecated_stack_usage)
+variable_watch(OPENSSL_INCLUDE_DIR watch_deprecated_stack_usage)
+variable_watch(OPENSSL_INSTALL_PREFIX watch_deprecated_stack_usage)
+
 find_path(OPENSSL_INCLUDE_DIR openssl.h)
 find_library(OPENSSL_SSL_LIBRARY OpenSSL::SSL)
 find_library(OPENSSL_CRYPTO_LIBRARY OpenSSL::Crypto)
 mark_as_advanced(OPENSSL_INCLUDE_DIR OpenSSL_LIBRARY)
 
+
 if (OPENSSL_FOUND OR TARGET OpenSSL::Crypto)
     return()
 endif ()
+
 include(ExternalProject)
 
 set(OPENSSL_VERSION $ENV{OPENSSL_VERSION})
@@ -82,54 +111,27 @@ endif ()
 ExternalProject_Get_Property(openssl INSTALL_DIR)
 set(OPENSSL_INSTALL_DIR ${INSTALL_DIR})
 
-# Create imported targets -----------------------------------------------------
-file(MAKE_DIRECTORY "${OPENSSL_INSTALL_DIR}/include")
-
 add_library(OpenSSL::SSL SHARED IMPORTED)
 add_library(OpenSSL::Crypto SHARED IMPORTED)
 
+set(OPENSSL_INCLUDE_DIR "${OPENSSL_INSTALL_DIR}/include")
+file(MAKE_DIRECTORY ${OPENSSL_INCLUDE_DIR})
+
+set(OPENSSL_INSTALL_PREFIX "${OPENSSL_INSTALL_DIR}")
+set(OPENSSL_CRYPTO_LIBRARY "${OPENSSL_INSTALL_DIR}/lib/libcrypto.so")
+set(OPENSSL_SSL_LIBRARY "${OPENSSL_INSTALL_DIR}/lib/libssl.so")
+
 set_target_properties(OpenSSL::SSL PROPERTIES
-        IMPORTED_LOCATION "${OPENSSL_INSTALL_DIR}/lib/libssl.so"
-        INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INSTALL_DIR}/include"
+        IMPORTED_LOCATION ${OPENSSL_SSL_LIBRARY}
+        INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}"
 )
-
 set_target_properties(OpenSSL::Crypto PROPERTIES
-        IMPORTED_LOCATION "${OPENSSL_INSTALL_DIR}/lib/libcrypto.so"
-        INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INSTALL_DIR}/include"
+        IMPORTED_LOCATION ${OPENSSL_CRYPTO_LIBRARY}
+        INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}"
 )
-
 add_dependencies(OpenSSL::SSL openssl)
 add_dependencies(OpenSSL::Crypto openssl)
 
-set(OPENSSL_CRYPTO_LIBRARY "${OPENSSL_INSTALL_DIR}/lib/libcrypto.so")
-set(OPENSSL_SSL_LIBRARY "${OPENSSL_INSTALL_DIR}/lib/libssl.so")
-set(OPENSSL_INSTALL_PREFIX "${OPENSSL_INSTALL_DIR}")
-set(OPENSSL_INCLUDE_DIR "${OPENSSL_INSTALL_DIR}/include")
 
-function(get_current_stack_targets output_var)
-    get_property(targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
-    set(${output_var} ${targets} PARENT_SCOPE)
-endfunction()
-
-function(add_dependency_to_stack_targets )
-    get_current_stack_targets(TARGETS)
-    foreach(target ${TARGETS})
-        if ("${target}" STREQUAL "openssl")
-            message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
-        endif()
-        message(WARNING "TARGET ${target}")
-        add_dependencies(${target} openssl)
-    endforeach()
-endfunction()
-
-function(watch_deprecated_stack_usage var access value current_list_file stack)
-    if(access STREQUAL "READ_ACCESS")
-        add_dependency_to_stack_targets(${stack})
-    endif()
-endfunction()
-variable_watch(OPENSSL_CRYPTO_LIBRARY watch_deprecated_stack_usage)
-variable_watch(OPENSSL_INCLUDE_DIR watch_deprecated_stack_usage)
-variable_watch(OPENSSL_SSL_LIBRARY watch_deprecated_stack_usage)
-variable_watch(OPENSSL_INSTALL_PREFIX watch_deprecated_stack_usage)
 
 
