@@ -1,50 +1,74 @@
-# hamcore_builder.cmake
+function(build_hamcore_se2  SOFTETHER_SOURCE_DIR  DESTINATION_DIR)
+    # Set up paths
+    set(TOP_DIRECTORY "${SOFTETHER_SOURCE_DIR}")
+    set(BUILD_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/hamcore")
+    file(MAKE_DIRECTORY "${BUILD_DIRECTORY}")
 
-string(REPLACE "." "_" SOFTETHERVPN_VERSION_CLEAN "${SOFTETHERVPN_VERSION}")
-set(HAMCORE_SE2_FILENAME "hamcore_se2_${SOFTETHERVPN_VERSION_CLEAN}")
+    # Generate versioned filename
+    string(REPLACE "." "_" SOFTETHERVPN_VERSION_CLEAN "${SOFTETHERVPN_VERSION}")
+    set(HAMCORE_SE2_FILENAME "hamcore_se2_${SOFTETHERVPN_VERSION_CLEAN}")
 
-if(EXISTS "${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}")
-    return()
-endif()
+    # Create temporary CMakeLists.txt with absolute paths
+    set(TEMP_CMAKE_FILE "${BUILD_DIRECTORY}/CMakeLists.txt")
+    file(WRITE "${TEMP_CMAKE_FILE}" "
+cmake_minimum_required(VERSION 3.10)
+project(hamcore_builder_host)
 
-function(build_hamcore_se2 SOFTETHER_SOURCE_DIR DESTINATION_DIR)
-set(TEMP_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/hamcore_build")
-set(LIBHAMCORE_BUILD_DIR "${TEMP_BUILD_DIR}/libhamcore")
-set(HAMCOREBUILDER_BUILD_DIR "${TEMP_BUILD_DIR}/hamcorebuilder")
+list(APPEND CMAKE_MODULE_PATH \"${CMAKE_SOURCE_DIR}/cmake/modules\")
+
+find_package(ZLIB REQUIRED)
+
+set(TOP_DIRECTORY \"${TOP_DIRECTORY}\")
+
+# libhamcore (absolute path)
+add_subdirectory(\${TOP_DIRECTORY}/src/libhamcore libhamcore)
+
+# hamcorebuilder utility (absolute path)
+add_subdirectory(\${TOP_DIRECTORY}/src/hamcorebuilder hamcorebuilder)
+
+# hamcore.se2 archive file
+add_custom_target(hamcore-archive-build ALL
+    DEPENDS \"${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}\"
+)
 
 add_custom_command(
-        OUTPUT "${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${TEMP_BUILD_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBHAMCORE_BUILD_DIR}"
-        COMMAND ${CMAKE_COMMAND}
-        -DCMAKE_BUILD_TYPE=Release
-        -S "${SOFTETHER_SOURCE_DIR}/src/libhamcore"
-        -B "${LIBHAMCORE_BUILD_DIR}"
-        COMMAND ${CMAKE_COMMAND} --build .
-        WORKING_DIRECTORY "${LIBHAMCORE_BUILD_DIR}"
-
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${HAMCOREBUILDER_BUILD_DIR}"
-        COMMAND ${CMAKE_COMMAND}
-        -DCMAKE_BUILD_TYPE=Release
-        -DCMAKE_C_FLAGS=-I${SOFTETHER_SOURCE_DIR}/src/libhamcore/include/ -I${SOFTETHER_SOURCE_DIR}/3rdparty/tinydir
-        -DCMAKE_EXE_LINKER_FLAGS=-L${LIBHAMCORE_BUILD_DIR} -lz
-        -S "${SOFTETHER_SOURCE_DIR}/src/hamcorebuilder"
-        -B "${HAMCOREBUILDER_BUILD_DIR}"
-        COMMAND ${CMAKE_COMMAND} --build .
-        WORKING_DIRECTORY "${HAMCOREBUILDER_BUILD_DIR}"
-
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${DESTINATION_DIR}"
-        COMMAND "${HAMCOREBUILDER_BUILD_DIR}/hamcorebuilder"
-        "${HAMCORE_SE2_FILENAME}"
-        "${SOFTETHER_SOURCE_DIR}/src/bin/hamcore"
-        WORKING_DIRECTORY "${DESTINATION_DIR}"
-
-        COMMENT "Building hamcore_se2 file"
-        VERBATIM
+    OUTPUT \"${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}\"
+    COMMAND \"\${CMAKE_CURRENT_BINARY_DIR}/hamcorebuilder/hamcorebuilder\"
+            \"${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}\"
+            \"\${TOP_DIRECTORY}/src/bin/hamcore\"
+    DEPENDS hamcorebuilder
+            \"\${TOP_DIRECTORY}/src/bin/hamcore/\"
+    WORKING_DIRECTORY \"\${CMAKE_CURRENT_BINARY_DIR}\"
+    COMMENT \"Building ${HAMCORE_SE2_FILENAME} archive file...\"
+    VERBATIM
 )
+")
 
-add_custom_target(
-        build_hamcore_se2 ALL
-        DEPENDS "${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}"
-)
+    # Custom command to configure the hamcore builder project by the host toolchain
+    add_custom_command(
+        OUTPUT "${BUILD_DIRECTORY}/CMakeCache.txt"
+        COMMAND ${CMAKE_COMMAND} -S "${BUILD_DIRECTORY}" -B "${BUILD_DIRECTORY}"
+                -DCMAKE_BUILD_TYPE=Release
+        DEPENDS "${TEMP_CMAKE_FILE}"
+        WORKING_DIRECTORY "${BUILD_DIRECTORY}"
+        COMMENT "Configuring hamcore builder project"
+    )
+
+    # Custom command to build the hamcore builder
+    add_custom_command(
+        OUTPUT "${BUILD_DIRECTORY}/${HAMCORE_SE2_FILENAME}"
+        COMMAND ${CMAKE_COMMAND} --build "${BUILD_DIRECTORY}"
+        DEPENDS "${BUILD_DIRECTORY}/CMakeCache.txt"
+                "${TOP_DIRECTORY}/src/bin/hamcore"
+        WORKING_DIRECTORY "${BUILD_DIRECTORY}"
+        COMMENT "Building hamcore.se2 archive"
+    )
+
+    # Main target that depends on the archive
+    add_custom_target(hamcore-archive ALL
+        DEPENDS "${BUILD_DIRECTORY}/${HAMCORE_SE2_FILENAME}"
+    )
+
+    # Make the output available
+    set(HAMCORE_ARCHIVE_PATH "${BUILD_DIRECTORY}/${HAMCORE_SE2_FILENAME}" PARENT_SCOPE)
 endfunction()

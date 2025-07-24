@@ -78,7 +78,6 @@ build_hamcore_se2(
         "${SOFTETHERVPN_SOURCE_DIR}"
         "${CMAKE_SOURCE_DIR}/../res/raw"
 )
-
 # Apply SoftEther VPN patch
 execute_process(
         COMMAND ${GIT_EXECUTABLE} apply --reverse --check "${CMAKE_CURRENT_SOURCE_DIR}/deps/softethervpn.patch"
@@ -107,6 +106,8 @@ set(CURSES_INCLUDE_PATH " ")
 
 # Add SoftEther VPN modules path
 list(APPEND CMAKE_MODULE_PATH "${SOFTETHERVPN_SOURCE_DIR}/src/Mayaqua/3rdparty")
+
+
 
 # Build configuration
 set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -142,3 +143,4 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
         cedar
         vpnclient
 )
+add_dependencies(nativevpn hamcore-archive)

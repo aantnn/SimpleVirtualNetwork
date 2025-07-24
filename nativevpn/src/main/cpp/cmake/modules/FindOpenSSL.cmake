@@ -51,13 +51,13 @@ set(OPENSSL_INSTALL_COMMAND
 
 #BUILD_IN_SOURCE 1 SO COPY
 if (DEFINED OPENSSL_SOURCE_DIR AND EXISTS ${OPENSSL_SOURCE_DIR})
-    set(COPY_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/openssl")
+    set(OPENSSL_DST_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/openssl")
     message(STATUS "Superbuild ExternalProject: BUILD_IN_SOURCE 1
  Copy from: ${OPENSSL_SOURCE_DIR}
- To: ${COPY_SRC_DIR}/..")
-    file(COPY "${OPENSSL_SOURCE_DIR}" DESTINATION "${COPY_SRC_DIR}/..") # The /.. is for overwriting the same dir name
+ To: ${OPENSSL_DST_SRC_DIR}/..")
+    file(COPY "${OPENSSL_SOURCE_DIR}" DESTINATION "${OPENSSL_DST_SRC_DIR}/..") # The /.. is for overwriting the same dir name
     ExternalProject_Add(openssl
-            SOURCE_DIR ${COPY_SRC_DIR}
+            SOURCE_DIR ${OPENSSL_DST_SRC_DIR}
             PREFIX ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
             CONFIGURE_COMMAND ${OPENSSL_CONFIGURE_COMMAND}
             BUILD_COMMAND ${OPENSSL_BUILD_COMMAND}
@@ -78,28 +78,28 @@ else ()
     )
 endif ()
 ExternalProject_Get_Property(openssl INSTALL_DIR)
-ExternalProject_Get_Property(openssl SOURCE_DIR)
+#ExternalProject_Get_Property(openssl SOURCE_DIR)
 
 set(OPENSSL_CRYPTO_LIBRARY "${INSTALL_DIR}/lib/libcrypto.so")
 set(OPENSSL_SSL_LIBRARY "${INSTALL_DIR}/lib/libssl.so")
+set(OPENSSL_INSTALL_PREFIX "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
 message(WARNING "Generating headers due to CMake and Ninja build system limitations in External build prioritization https://discourse.cmake.org/t/design-cmake-projects-with-autocode-generators/9011/2")
 set(openssl_configure_flags
         perl ./Configure
         ${OPENSSL_TARGET}
-        --prefix=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        --prefix=${OPENSSL_INSTALL_PREFIX}
         -D__ANDROID_API__=${ANDROID_NATIVE_API_LEVEL}
         -fPIC shared no-ui no-ui-console no-engine no-filenames)
-build_autoconf_external_project(openssl "${COPY_SRC_DIR}" "" "${openssl_configure_flags}" "build_generated" "build_generated" "")
-file(COPY "${COPY_SRC_DIR}/include/openssl" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/include/")
-file(COPY "${COPY_SRC_DIR}/include/crypto" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/include/")
+build_autoconf_external_project(openssl "${OPENSSL_DST_SRC_DIR}" "" "${openssl_configure_flags}" "build_generated" "build_generated" "")
+file(COPY "${OPENSSL_DST_SRC_DIR}/include/openssl" DESTINATION "${INSTALL_DIR}/include/")
+file(COPY "${OPENSSL_DST_SRC_DIR}/include/crypto" DESTINATION "${INSTALL_DIR}/include/")
 # Ninja does not respect byproducts with headers. It behaves like they already there
 
-set(OPENSSL_INCLUDE_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/include;${INSTALL_DIR}/include")
-set(OPENSSL_INSTALL_PREFIX "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+set(OPENSSL_INCLUDE_DIR "${INSTALL_DIR}/include")
+
 
 file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
-#file(MAKE_DIRECTORY ${INSTALL_DIR}/lib)
 
 set(OPENSSL_DIR ${INSTALL_DIR} CACHE INTERNAL "")
 
