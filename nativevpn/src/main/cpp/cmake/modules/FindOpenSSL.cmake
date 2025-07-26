@@ -83,9 +83,9 @@ set(OPENSSL_CONFIGURE_COMMAND
         ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} perl "<SOURCE_DIR>/Configure" ${openssl_configure_flags}
         "--prefix=${INSTALL_DIR}")
 set(OPENSSL_BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make -j30 -sC "<SOURCE_DIR>" build_libs)
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" build_libs)
 set(OPENSSL_INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make -j30 -sC "<SOURCE_DIR>" install_dev install_runtime)
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install_dev install_runtime)
 
 if (DEFINED OPENSSL_SOURCE_DIR AND EXISTS ${OPENSSL_SOURCE_DIR})
     set(OPENSSL_DST_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/openssl")

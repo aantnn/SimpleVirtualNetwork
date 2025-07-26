@@ -29,9 +29,9 @@ set(CONFIGURE_COMMAND
         ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} bash "<SOURCE_DIR>/configure" ${configure_flags}
         "--prefix=${INSTALL_DIR}")
 set(BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j30 -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install)
 set(INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j30 -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install)
 
 #BUILD_IN_SOURCE 1 SO COPY
 if (DEFINED ICONV_SOURCE_DIR AND EXISTS ${ICONV_SOURCE_DIR})

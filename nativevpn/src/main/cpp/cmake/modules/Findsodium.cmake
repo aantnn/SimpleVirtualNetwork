@@ -33,9 +33,9 @@ set(CONFIGURE_COMMAND
         ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} bash "<SOURCE_DIR>/configure" ${configure_flags}
         "--prefix=${INSTALL_DIR}" "--enable-shared" "--disable-static")
 set(BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install)
 set(INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install)
 
 
 if (DEFINED SODIUM_SOURCE_DIR AND EXISTS ${SODIUM_SOURCE_DIR})
