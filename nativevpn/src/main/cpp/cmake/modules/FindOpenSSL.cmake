@@ -61,7 +61,7 @@ get_autoconf_target(AUTOCONF_TARGET)
 
 string(REPLACE "\\" "/" INSTALL_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 if(CMAKE_HOST_WIN32)
-    set (ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/opessl_configure_env.bat)
+    set (ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/openssl_configure_env.bat)
     set(ANDROID_NDK_BACK ${ANDROID_NDK})
     string(REPLACE "C:/" "/cygdrive/c/" ANDROID_NDK "${ANDROID_NDK}")
     create_env_file(${ENV_SCRIPT_CMD} ${CYGWIN_BIN_DIR})
