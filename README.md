@@ -1,5 +1,17 @@
 # Clone and open in Android Studio on Linux 
-[Linux make tool is required](https://github.com/antnn/SimpleVirtualNetwork/blob/b2b660cf6ed07ee14527e375b763712a29600edd/nativevpn/src/main/cpp/cmake/modules/FindOpenSSL.cmake#L42)
+# Dependencies
+For Linux/Unix host
+```
+Perl modules: FindBin, IPC::Cmd, File::Compare, File::Copy 
+GNU make, sed, bash (for ./configure)
+```
+For Windows host
+```
+Cygwin Perl and Perl modules: FindBin, IPC::Cmd, File::Compare, File::Copy - forward slash issues with Openssl's Perl /Configure)
+Msys GNU make, sed, bash (for bash ./configure), Cygwin does not work
+armv7a-linux-androideabi{VER}-clang /cygwindrive/c/.. produce not found errors
+```
+
 # OR Install SDK
 ```bash
 # Dependencies for OpenSSL: perl-FindBin, perl-core, perl-lib
