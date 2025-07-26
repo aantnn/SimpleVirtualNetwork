@@ -34,7 +34,7 @@ list(APPEND MSYS_SEARCH_PATHS
 
 # Look for MSYS bash executable
 find_program(MSYS_EXECUTABLE
-        NAMES bash.exe
+        NAMES pacman.exe
         PATHS ${MSYS_SEARCH_PATHS}
         DOC "Path to MSYS bash executable"
 )
@@ -47,7 +47,7 @@ if(MSYS_EXECUTABLE)
     # Check if the MSYS bin directory is already in the PATH
     if(NOT "${CURRENT_PATH}" MATCHES "${MSYS_BIN_DIR}")
         # Append the MSYS bin directory to the PATH
-        set(ENV{PATH} "${MSYS_BIN_DIR};${CURRENT_PATH}")
+        #set(ENV{PATH} "${MSYS_BIN_DIR};${CURRENT_PATH}")
         #message(STATUS "Added ${MSYS_BIN_DIR} to system PATH")
     endif()
 endif()

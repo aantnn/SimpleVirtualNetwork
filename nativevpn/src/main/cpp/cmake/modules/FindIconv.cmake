@@ -9,20 +9,29 @@ include(${CMAKE_CURRENT_LIST_DIR}/CommonAndroidSetup.cmake)
 get_autoconf_target(AUTOCONF_TARGET)
 
 
+string(REPLACE "\\" "/" INSTALL_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+if(CMAKE_HOST_WIN32)
+    set (ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/configure_env.bat)
+    create_env_file(${ENV_SCRIPT_CMD} ${MSYS_BIN_DIR})
+else()
+    set (ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/configure_env.sh)
+    create_env_file(${ENV_SCRIPT_CMD})
+endif()
+
 # Configure flags for Android build
 set(configure_flags
         --host=${AUTOCONF_TARGET}
         --enable-shared)
 
-string(REPLACE "\\" "/" INSTALL_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
 set(CONFIGURE_COMMAND
         cd "<SOURCE_DIR>" &&
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} ${SHELL} "<SOURCE_DIR>/configure" ${configure_flags}
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} bash "<SOURCE_DIR>/configure" ${configure_flags}
         "--prefix=${INSTALL_DIR}")
 set(BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} ${MAKE_PROGRAM} -j30 -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j30 -sC "<SOURCE_DIR>" install)
 set(INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} ${MAKE_PROGRAM} -j30 -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j30 -sC "<SOURCE_DIR>" install)
 
 #BUILD_IN_SOURCE 1 SO COPY
 if (DEFINED ICONV_SOURCE_DIR AND EXISTS ${ICONV_SOURCE_DIR})

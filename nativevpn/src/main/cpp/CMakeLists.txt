@@ -23,9 +23,14 @@ endforeach()
 if(CMAKE_HOST_WIN32)
         message(STATUS "Use Cygwin Perl variant (forward slash issues in perl and OpenSSL Configure)") #--prefix=/cygwin/c...
         find_package(Cygwin REQUIRED)
-        find_package(Msys REQUIRED) # for ${MSYS_BASH.exe} ./configure --prefix=C:/...
-endif()
+        find_program(PERL_EXECUTABLE
+                NAMES perl.exe
+                HINTS "${CYGWIN_BIN_DIR}"
+        )
+        find_package(Msys REQUIRED)
+else()
 find_package(Perl REQUIRED)
+endif()
 execute_process(
         COMMAND ${PERL_EXECUTABLE} -MFindBin -MIPC::Cmd -MFile::Compare -MFile::Copy -e "print \"Perl modules available\\n\""
         RESULT_VARIABLE perl_module_check

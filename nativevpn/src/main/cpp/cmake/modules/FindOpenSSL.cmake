@@ -59,11 +59,20 @@ include(${CMAKE_CURRENT_LIST_DIR}/CommonAndroidSetup.cmake)
 get_autoconf_target(AUTOCONF_TARGET)
 
 
-if(CMAKE_HOST_WIN32)
-    string(REPLACE "C:/" "/cygdrive/c/" ANDROID_NDK_CYGWIN "${ANDROID_NDK}")
-    set(MAKE_PROGRAM "${CYGWIN_BIN_DIR}/make.exe")
-endif ()
 string(REPLACE "\\" "/" INSTALL_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+if(CMAKE_HOST_WIN32)
+    set (ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/opessl_configure_env.bat)
+    set(ANDROID_NDK_BACK ${ANDROID_NDK})
+    string(REPLACE "C:/" "/cygdrive/c/" ANDROID_NDK "${ANDROID_NDK}")
+    create_env_file(${ENV_SCRIPT_CMD} ${CYGWIN_BIN_DIR})
+    set(ANDROID_NDK ${ANDROID_NDK_BACK})
+else()
+    set (ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/openssl_configure_env.sh)
+    create_env_file(${ENV_SCRIPT_CMD})
+endif()
+
+
+
 set(openssl_configure_flags
         ${OPENSSL_TARGET}
         -D__ANDROID_API__=${ANDROID_NATIVE_API_LEVEL}
@@ -74,9 +83,9 @@ set(OPENSSL_CONFIGURE_COMMAND
         ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} perl "<SOURCE_DIR>/Configure" ${openssl_configure_flags}
         "--prefix=${INSTALL_DIR}")
 set(OPENSSL_BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} ${MAKE_PROGRAM} -j30 -sC "<SOURCE_DIR>" build_libs)
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make -j30 -sC "<SOURCE_DIR>" build_libs)
 set(OPENSSL_INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} ${MAKE_PROGRAM} -j30 -sC "<SOURCE_DIR>" install_dev install_runtime)
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make -j30 -sC "<SOURCE_DIR>" install_dev install_runtime)
 
 if (DEFINED OPENSSL_SOURCE_DIR AND EXISTS ${OPENSSL_SOURCE_DIR})
     set(OPENSSL_DST_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/openssl")

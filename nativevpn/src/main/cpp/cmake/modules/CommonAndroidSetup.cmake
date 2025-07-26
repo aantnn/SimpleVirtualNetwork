@@ -14,55 +14,51 @@ endfunction()
 
 get_autoconf_target(AUTOCONF_TARGET)
 
+
+
+
+
+function(create_env_file ENV_SCRIPT_CMD A_PATH)
 if(CMAKE_HOST_WIN32)
     set(ENV_SETTER "set")
 else ()
     set(ENV_SETTER "export")
 endif()
-
-set(SHELL "")
+set(android_env "") 
+string(APPEND android_env "${ENV_SETTER} CC=${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang\n")
+string(APPEND android_env "${ENV_SETTER} AR=llvm-ar\n")
+string(APPEND android_env "${ENV_SETTER} AS=${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang\n")
+string(APPEND android_env "${ENV_SETTER} CXX=${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang++\n")
+string(APPEND android_env "${ENV_SETTER} LD=ld\n")
+string(APPEND android_env "${ENV_SETTER} RANLIB=llvm-ranlib\n")
+string(APPEND android_env "${ENV_SETTER} STRIP=llvm-strip\n")
 if(CMAKE_HOST_WIN32)
-    set(SHELL "${MSYS_BIN_DIR}/bash.exe")
-    set(MAKE_PROGRAM "${MSYS_BIN_DIR}/make.exe")
-endif ()
-
-set(android_env "${android_env} ${ENV_SETTER} CC=${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang\n")
-set(android_env "${android_env} ${ENV_SETTER} AR=llvm-ar\n")
-set(android_env "${android_env} ${ENV_SETTER} AS=${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang\n")
-set(android_env "${android_env} ${ENV_SETTER} CXX=${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang++\n")
-set(android_env "${android_env} ${ENV_SETTER} LD=ld\n")
-set(android_env "${android_env} ${ENV_SETTER} RANLIB=llvm-ranlib\n")
-set(android_env "${android_env} ${ENV_SETTER} STRIP=llvm-strip\n")
-if(CMAKE_HOST_WIN32)
-    if(ANDROID_NDK_CYGWIN)
-        set(android_env "${android_env} ${ENV_SETTER} ANDROID_NDK_ROOT=${ANDROID_NDK_CYGWIN}\n")
-    else()
-        set(android_env "${android_env} ${ENV_SETTER} ANDROID_NDK_ROOT=${ANDROID_NDK}\n")
-    endif ()
-    set(android_env "${android_env} ${ENV_SETTER} PATH=${ANDROID_TOOLCHAIN_ROOT}/bin;$ENV{PATH}\n")
+    string(APPEND android_env "${ENV_SETTER} ANDROID_NDK_ROOT=${ANDROID_NDK}\n")
+    string(APPEND android_env "${ENV_SETTER} PATH=${ANDROID_TOOLCHAIN_ROOT}/bin;${A_PATH};$ENV{PATH}\n")
 else ()
-    set(android_env "${android_env} ${ENV_SETTER} ANDROID_NDK_ROOT=${ANDROID_NDK}\n")
-    set(android_env "${android_env} ${ENV_SETTER} PATH=\"${ANDROID_TOOLCHAIN_ROOT}/bin:$ENV{PATH}\"\n")
+    string(APPEND android_env "${ENV_SETTER} ANDROID_NDK_ROOT=${ANDROID_NDK}\n")
+    string(APPEND android_env "${ENV_SETTER} PATH=\"${ANDROID_TOOLCHAIN_ROOT}/bin:$ENV{PATH}\"\n")
 endif()
 
 # The %PATH% semicolon issue in ExternalProject_Add is particularly stubborn on Windows so
 # Determine host platform and create appropriate environment script
 if(CMAKE_HOST_WIN32)
-    file(WRITE ${CMAKE_BINARY_DIR}/configure_env.bat
-            "@echo off
-                setlocal enabledelayedexpansion
-                ${android_env}
-            ${CMAKE_COMMAND} -E env %*" )
-    set(ENV_SCRIPT_CMD "${CMAKE_BINARY_DIR}/configure_env.bat")
+    file(WRITE ${ENV_SCRIPT_CMD}
+"@echo off
+setlocal enabledelayedexpansion
+${android_env}
+${CMAKE_COMMAND} -E env %*" )
 else()
-    file(WRITE ${CMAKE_BINARY_DIR}/configure_env.sh
-            "#!/bin/bash
-                ${android_env}
-            ${CMAKE_COMMAND} -E env $@
+    file(WRITE ${ENV_SCRIPT_CMD}
+"#!/bin/bash
+${android_env}
+${CMAKE_COMMAND} -E env $@
 exit $?")
-    execute_process(COMMAND chmod +x ${CMAKE_BINARY_DIR}/configure_env.sh)
-    set(ENV_SCRIPT_CMD "${CMAKE_BINARY_DIR}/configure_env.sh")
+    execute_process(COMMAND chmod +x ${ENV_SCRIPT_CMD})
 endif()
+endfunction()
+
+
 
 
 function(log_error error command args dir )
