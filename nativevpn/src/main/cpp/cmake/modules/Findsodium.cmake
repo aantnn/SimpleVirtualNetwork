@@ -49,7 +49,7 @@ if (DEFINED SODIUM_SOURCE_DIR AND EXISTS ${SODIUM_SOURCE_DIR})
             BUILD_COMMAND ${BUILD_COMMAND}
             INSTALL_COMMAND ${INSTALL_COMMAND}
             DOWNLOAD_COMMAND ""
-            BUILD_BYPRODUCTS ${INSTALL_DIR}lib/libsodium.so
+            BUILD_BYPRODUCTS ${INSTALL_DIR}/lib/libsodium.so  ${INSTALL_DIR}/include/sodium.h
             BUILD_IN_SOURCE 1
     )
 else ()
@@ -61,7 +61,7 @@ else ()
             BUILD_COMMAND ${BUILD_COMMAND}
             INSTALL_COMMAND ${INSTALL_COMMAND}
             DOWNLOAD_EXTRACT_TIMESTAMP 0
-            BUILD_BYPRODUCTS ${INSTALL_DIR}/lib/libsodium.so
+            BUILD_BYPRODUCTS ${INSTALL_DIR}/lib/libsodium.so  ${INSTALL_DIR}/include/sodium.h
             BUILD_IN_SOURCE 1
     )
 endif ()
@@ -90,3 +90,28 @@ find_package_handle_standard_args(sodium
 )
 
 
+
+function(get_current_stack_targets output_var)
+    get_property(targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    set(${output_var} ${targets} PARENT_SCOPE)
+endfunction()
+
+function(add_dependency_to_stack_targets )
+    get_current_stack_targets(TARGETS)
+    foreach(target ${TARGETS})
+        if ("${target}" STREQUAL "libsodium" OR "${target}" STREQUAL "copy-libsodium")
+            #message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
+            continue()
+        endif()
+        add_dependencies(${target} libsodium)
+    endforeach()
+endfunction()
+
+function(watch_deprecated_stack_usage var access value current_list_file stack)
+    if(access STREQUAL "READ_ACCESS")
+        add_dependency_to_stack_targets(${stack})
+    endif()
+endfunction()
+variable_watch(SODIUM_INCLUDE_DIRS watch_deprecated_stack_usage)
+variable_watch(SODIUM_LIBRARIES watch_deprecated_stack_usage)
+variable_watch(SODIUM_LINK_LIBRARIES watch_deprecated_stack_usage)
