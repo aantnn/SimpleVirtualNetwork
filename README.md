@@ -6,7 +6,7 @@ GNU make, sed, bash, minimal standart linux tools (for ./configure)
 ```
 For Windows host
 ```
-Cygwin Perl and Perl modules: FindBin, IPC::Cmd, File::Compare, File::Copy 
+Cygwin GNU make, Perl and Perl modules: FindBin, IPC::Cmd, File::Compare, File::Copy 
     - forward slash issues with Openssl's Perl /Configure)
 Msys GNU make, sed, bash, etc (for bash ./configure)
     - Cygwin does not work armv7a-linux-androideabi{VER}-clang 
