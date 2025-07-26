@@ -20,7 +20,11 @@ foreach(LINE ${DEPS_LINES})
         endif()
 endforeach()
 
-
+if(CMAKE_HOST_WIN32)
+        message(STATUS "Use Cygwin Perl variant (forward slash issues in perl and OpenSSL Configure)") #--prefix=/cygwin/c...
+        find_package(Cygwin REQUIRED)
+        find_package(Msys REQUIRED) # for ${MSYS_BASH.exe} ./configure --prefix=C:/...
+endif()
 find_package(Perl REQUIRED)
 execute_process(
         COMMAND ${PERL_EXECUTABLE} -MFindBin -MIPC::Cmd -MFile::Compare -MFile::Copy -e "print \"Perl modules available\\n\""
@@ -56,15 +60,7 @@ clone_if_not_exists(
         "${SOFTETHERVPN_SOURCE_DIR}"
 )
 
-# Find required packages
-if(CMAKE_HOST_WIN32)
-        find_package(Cygwin REQUIRED)
-        if(CYGWIN_FOUND)
-                message(STATUS "Cygwin found at: ${CYGWIN_INSTALL_DIR}")
-                message(STATUS "Cygwin bin directory: ${CYGWIN_BIN_DIR}")
-                message(STATUS "Cygwin bash executable: ${CYGWIN_EXECUTABLE}")
-        endif()
-endif()
+
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
 set(HAVE_EVP_PKEY_GET_RAW_PUBLIC_KEY TRUE CACHE BOOL "Override OpenSSL symbol check")
@@ -72,12 +68,7 @@ set(HAVE_SSL_CTX_SET_NUM_TICKETS TRUE CACHE BOOL "Override OpenSSL symbol check"
 find_package(sodium REQUIRED)
 find_package(Iconv REQUIRED)
 
-# Build HamCore
-include(${CMAKE_CURRENT_LIST_DIR}/cmake/modules/hamcore_builder.cmake)
-build_hamcore_se2(
-        "${SOFTETHERVPN_SOURCE_DIR}"
-        "${CMAKE_SOURCE_DIR}/../res/raw"
-)
+
 # Apply SoftEther VPN patch
 execute_process(
         COMMAND ${GIT_EXECUTABLE} apply --reverse --check "${CMAKE_CURRENT_SOURCE_DIR}/deps/softethervpn.patch"
@@ -112,7 +103,7 @@ list(APPEND CMAKE_MODULE_PATH "${SOFTETHERVPN_SOURCE_DIR}/src/Mayaqua/3rdparty")
 # Build configuration
 set(CMAKE_VERBOSE_MAKEFILE ON)
 cmake_host_system_information(RESULT nproc QUERY NUMBER_OF_PHYSICAL_CORES)
-
+set(NPROC ${nproc} CACHE INTERNAL "")
 
 # Android helpers library
 add_library(androidhelpers INTERFACE)
@@ -143,4 +134,10 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
         cedar
         vpnclient
 )
-add_dependencies(nativevpn hamcore-archive)
+# Build Hamcore
+#[[include(${CMAKE_CURRENT_LIST_DIR}/cmake/modules/hamcore_builder.cmake)
+build_hamcore_se2(
+        "${SOFTETHERVPN_SOURCE_DIR}"
+        "${CMAKE_SOURCE_DIR}/../res/raw"
+)]]
+#add_dependencies(nativevpn hamcore-archive)

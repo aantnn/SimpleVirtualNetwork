@@ -8,48 +8,64 @@ set(ICONV_SHA $ENV{ICONV_SHA})
 include(${CMAKE_CURRENT_LIST_DIR}/CommonAndroidSetup.cmake)
 get_autoconf_target(AUTOCONF_TARGET)
 
+
 # Configure flags for Android build
 set(configure_flags
         --host=${AUTOCONF_TARGET}
         --enable-shared)
 
+string(REPLACE "\\" "/" INSTALL_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set(CONFIGURE_COMMAND
         cd "<SOURCE_DIR>" &&
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} "<SOURCE_DIR>/configure" ${configure_flags}
-        "--prefix=<INSTALL_DIR>")
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} ${SHELL} "<SOURCE_DIR>/configure" ${configure_flags}
+        "--prefix=${INSTALL_DIR}")
 set(BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} ${MAKE_PROGRAM} -j30 -sC "<SOURCE_DIR>" install)
 set(INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} ${MAKE_PROGRAM} -j30 -sC "<SOURCE_DIR>" install)
 
 #BUILD_IN_SOURCE 1 SO COPY
 if (DEFINED ICONV_SOURCE_DIR AND EXISTS ${ICONV_SOURCE_DIR})
     set(COPY_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/iconv")
-    message(STATUS "NECESSARY Copy of sources. Reason: BUILD_IN_SOURCE 1 ExternalProject(libiconv")
-    file(COPY "${ICONV_SOURCE_DIR}" DESTINATION "${COPY_SRC_DIR}/..")
+    #file(COPY "${ICONV_SOURCE_DIR}" DESTINATION "${COPY_SRC_DIR}/..")
+    add_custom_command(
+        OUTPUT "${COPY_SRC_DIR}/Configure"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${COPY_SRC_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${ICONV_SOURCE_DIR}"
+            "${COPY_SRC_DIR}"
+        COMMENT "Copying libiconv sources"
+        BYPRODUCTS "${COPY_SRC_DIR}" 
+    )
+    add_custom_target(copy-libiconv DEPENDS "${COPY_SRC_DIR}/Configure")
     ExternalProject_Add(libiconv
             SOURCE_DIR ${COPY_SRC_DIR}
-            PREFIX ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            PREFIX ${INSTALL_DIR}
+            DEPENDS copy-libiconv
             CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
             BUILD_COMMAND ${BUILD_COMMAND}
             INSTALL_COMMAND ${INSTALL_COMMAND}
             DOWNLOAD_COMMAND ""
-            BUILD_BYPRODUCTS <INSTALL_DIR>/lib/libiconv.so
+            BUILD_BYPRODUCTS ${INSTALL_DIR}/lib/libiconv.so
+            BUILD_IN_SOURCE 1
     )
 else ()
     ExternalProject_Add(libiconv
             URL https://ftp.gnu.org/pub/gnu/libiconv/libiconv-${ICONV_VERSION}.tar.gz
             URL_HASH SHA256=${ICONV_SHA}
-            PREFIX ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            PREFIX ${INSTALL_DIR}
             CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
             BUILD_COMMAND ${BUILD_COMMAND}
             INSTALL_COMMAND ${INSTALL_COMMAND}
             DOWNLOAD_EXTRACT_TIMESTAMP 0
-            BUILD_BYPRODUCTS <INSTALL_DIR>/lib/libiconv.so
+            BUILD_BYPRODUCTS ${INSTALL_DIR}/lib/libiconv.so
+            BUILD_IN_SOURCE 1
     )
 endif ()
-ExternalProject_Get_Property(libiconv INSTALL_DIR)
-ExternalProject_Get_Property(libiconv SOURCE_DIR)
+#ExternalProject_Get_Property(libiconv INSTALL_DIR)
+#ExternalProject_Get_Property(libiconv SOURCE_DIR)
+
+
 
 file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
 #file(MAKE_DIRECTORY ${INSTALL_DIR}/lib)
@@ -85,8 +101,9 @@ endfunction()
 function(add_dependency_to_stack_targets )
     get_current_stack_targets(TARGETS)
     foreach(target ${TARGETS})
-        if ("${target}" STREQUAL "iconv")
-            message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
+        if ("${target}" STREQUAL "libiconv" OR "${target}" STREQUAL "copy-libiconv")
+            #message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
+            continue()
         endif()
         add_dependencies(${target} libiconv)
     endforeach()

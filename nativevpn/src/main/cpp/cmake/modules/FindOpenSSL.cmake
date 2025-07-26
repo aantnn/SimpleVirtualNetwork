@@ -6,10 +6,11 @@ endfunction()
 function(add_dependency_to_stack_targets )
     get_current_stack_targets(TARGETS)
     foreach(target ${TARGETS})
-        if ("${target}" STREQUAL "openssl")
-            message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
+        if ("${target}" STREQUAL "openssl" OR "${target}" STREQUAL "copy-openssl")
+            #message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
+            continue()
         endif()
-        message(WARNING "TARGET ${target}")
+        #message(WARNING "TARGET ${target}")
         add_dependencies(${target} openssl)
     endforeach()
 endfunction()
@@ -54,13 +55,15 @@ endfunction()
 
 get_openssl_target(OPENSSL_TARGET)
 
-if(CMAKE_HOST_WIN32)
-    string(REPLACE "C:/" "/cygdrive/c/" ANDROID_NDK_CYGWIN "${ANDROID_NDK}")
-endif ()
-
 include(${CMAKE_CURRENT_LIST_DIR}/CommonAndroidSetup.cmake)
 get_autoconf_target(AUTOCONF_TARGET)
 
+
+if(CMAKE_HOST_WIN32)
+    string(REPLACE "C:/" "/cygdrive/c/" ANDROID_NDK_CYGWIN "${ANDROID_NDK}")
+    set(MAKE_PROGRAM "${CYGWIN_BIN_DIR}/make.exe")
+endif ()
+string(REPLACE "\\" "/" INSTALL_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set(openssl_configure_flags
         ${OPENSSL_TARGET}
         -D__ANDROID_API__=${ANDROID_NATIVE_API_LEVEL}
@@ -69,57 +72,66 @@ set(openssl_configure_flags
 set(OPENSSL_CONFIGURE_COMMAND
         cd "<SOURCE_DIR>" &&
         ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} perl "<SOURCE_DIR>/Configure" ${openssl_configure_flags}
-        "--prefix=<INSTALL_DIR>")
+        "--prefix=${INSTALL_DIR}")
 set(OPENSSL_BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" build_libs)
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} ${MAKE_PROGRAM} -j30 -sC "<SOURCE_DIR>" build_libs)
 set(OPENSSL_INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" install_dev install_runtime)
+        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} ${MAKE_PROGRAM} -j30 -sC "<SOURCE_DIR>" install_dev install_runtime)
 
 if (DEFINED OPENSSL_SOURCE_DIR AND EXISTS ${OPENSSL_SOURCE_DIR})
     set(OPENSSL_DST_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/openssl")
-    message(STATUS "Superbuild ExternalProject: BUILD_IN_SOURCE 1
- Copy from: ${OPENSSL_SOURCE_DIR}
- To: ${OPENSSL_DST_SRC_DIR}/..")
-    file(COPY "${OPENSSL_SOURCE_DIR}" DESTINATION "${OPENSSL_DST_SRC_DIR}/..") # The /.. is for overwriting the same dir name
+    #file(COPY "${OPENSSL_SOURCE_DIR}" DESTINATION "${OPENSSL_DST_SRC_DIR}/..") # The /.. is for overwriting the same dir name
+    add_custom_command(
+        OUTPUT "${OPENSSL_DST_SRC_DIR}/Configure"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENSSL_DST_SRC_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${OPENSSL_SOURCE_DIR}"
+            "${OPENSSL_DST_SRC_DIR}"
+        COMMENT "Copying OpenSSL sources"
+    )
+    add_custom_target(copy-openssl DEPENDS "${OPENSSL_DST_SRC_DIR}/Configure")
     ExternalProject_Add(openssl
             SOURCE_DIR ${OPENSSL_DST_SRC_DIR}
-            PREFIX ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            PREFIX ${INSTALL_DIR}
+            DEPENDS copy-openssl
             CONFIGURE_COMMAND ${OPENSSL_CONFIGURE_COMMAND}
             BUILD_COMMAND ${OPENSSL_BUILD_COMMAND}
             INSTALL_COMMAND ${OPENSSL_INSTALL_COMMAND}
             DOWNLOAD_COMMAND ""
             BUILD_BYPRODUCTS
-            <INSTALL_DIR>/lib/libssl.so
-            <INSTALL_DIR>/lib/libcrypto.so
+            ${INSTALL_DIR}/lib/libssl.so
+            ${INSTALL_DIR}/lib/libcrypto.so
+            BUILD_IN_SOURCE 1
     )
 else ()
     ExternalProject_Add(openssl
             URL https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
             URL_HASH SHA256=${OPENSSL_SHA_VER}
-            PREFIX ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            PREFIX ${INSTALL_DIR}
             CONFIGURE_COMMAND ${OPENSSL_CONFIGURE_COMMAND}
             BUILD_COMMAND ${OPENSSL_BUILD_COMMAND}
             INSTALL_COMMAND ${OPENSSL_INSTALL_COMMAND}
             DOWNLOAD_EXTRACT_TIMESTAMP 0
             BUILD_BYPRODUCTS
-            <INSTALL_DIR>/lib/libssl.so
-            <INSTALL_DIR>/lib/libcrypto.so
+            ${INSTALL_DIR}/lib/libssl.so
+            ${INSTALL_DIR}/lib/libcrypto.so
+            BUILD_IN_SOURCE 1
     )
 endif ()
 
 
-ExternalProject_Get_Property(openssl INSTALL_DIR)
-set(OPENSSL_INSTALL_DIR ${INSTALL_DIR})
+#ExternalProject_Get_Property(openssl INSTALL_DIR)
+#string(REPLACE "\\" "/" OPENSSL_INSTALL_DIR ${INSTALL_DIR})
 
 add_library(OpenSSL::SSL SHARED IMPORTED)
 add_library(OpenSSL::Crypto SHARED IMPORTED)
 
-set(OPENSSL_INCLUDE_DIR "${OPENSSL_INSTALL_DIR}/include")
+set(OPENSSL_INCLUDE_DIR "${INSTALL_DIR}/include")
 file(MAKE_DIRECTORY ${OPENSSL_INCLUDE_DIR})
 
-set(OPENSSL_INSTALL_PREFIX "${OPENSSL_INSTALL_DIR}")
-set(OPENSSL_CRYPTO_LIBRARY "${OPENSSL_INSTALL_DIR}/lib/libcrypto.so")
-set(OPENSSL_SSL_LIBRARY "${OPENSSL_INSTALL_DIR}/lib/libssl.so")
+set(OPENSSL_INSTALL_PREFIX "${INSTALL_DIR}")
+set(OPENSSL_CRYPTO_LIBRARY "${INSTALL_DIR}/lib/libcrypto.so")
+set(OPENSSL_SSL_LIBRARY "${INSTALL_DIR}/lib/libssl.so")
 
 set_target_properties(OpenSSL::SSL PROPERTIES
         IMPORTED_LOCATION ${OPENSSL_SSL_LIBRARY}

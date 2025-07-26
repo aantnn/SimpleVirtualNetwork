@@ -5,7 +5,8 @@
 #  ZLIB_INCLUDE_DIRS - the zlib include directories
 #  ZLIB_LIBRARIES - link these to use zlib
 #  ZLIB_VERSION - version of zlib found
-
+find_package(ZLIB)
+#[[
 include(ExternalProject)
 include(FindPackageHandleStandardArgs)
 
@@ -94,3 +95,4 @@ find_package_handle_standard_args(zlib
         REQUIRED_VARS ZLIB_LIBRARIES ZLIB_INCLUDE_DIRS
         VERSION_VAR ZLIB_VERSION
 )
+]]

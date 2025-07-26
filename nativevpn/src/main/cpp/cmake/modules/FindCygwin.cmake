@@ -48,7 +48,7 @@ if(CYGWIN_EXECUTABLE)
     if(NOT "${CURRENT_PATH}" MATCHES "${CYGWIN_BIN_DIR}")
         # Append the Cygwin bin directory to the PATH
         set(ENV{PATH} "${CYGWIN_BIN_DIR};${CURRENT_PATH}")
-        message(STATUS "Added ${CYGWIN_BIN_DIR} to system PATH")
+        #message(STATUS "Added ${CYGWIN_BIN_DIR} to system PATH")
     endif()
 endif()
 

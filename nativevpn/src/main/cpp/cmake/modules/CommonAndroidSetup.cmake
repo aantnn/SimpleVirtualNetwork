@@ -20,6 +20,11 @@ else ()
     set(ENV_SETTER "export")
 endif()
 
+set(SHELL "")
+if(CMAKE_HOST_WIN32)
+    set(SHELL "${MSYS_BIN_DIR}/bash.exe")
+    set(MAKE_PROGRAM "${MSYS_BIN_DIR}/make.exe")
+endif ()
 
 set(android_env "${android_env} ${ENV_SETTER} CC=${AUTOCONF_TARGET}${ANDROID_NATIVE_API_LEVEL}-clang\n")
 set(android_env "${android_env} ${ENV_SETTER} AR=llvm-ar\n")

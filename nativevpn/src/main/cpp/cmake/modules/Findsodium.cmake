@@ -6,7 +6,6 @@ set(SODIUM_SHA $ENV{SODIUM_SHA})
 set(SODIUM_VERSION $ENV{SODIUM_VERSION})
 
 
-
 include(${CMAKE_CURRENT_LIST_DIR}/CommonAndroidSetup.cmake)
 get_autoconf_target(AUTOCONF_TARGET)
 
@@ -18,43 +17,57 @@ if (ANDROID_ABI STREQUAL "arm64-v8a")
 endif ()
 
 
+string(REPLACE "\\" "/" INSTALL_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set(CONFIGURE_COMMAND
         cd "<SOURCE_DIR>" &&
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} "<SOURCE_DIR>/configure" ${configure_flags}
-        "--prefix=<INSTALL_DIR>" "--enable-shared" "--disable-static")
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} ${SHELL} "<SOURCE_DIR>/configure" ${configure_flags}
+        "--prefix=${INSTALL_DIR}" "--enable-shared" "--disable-static")
 set(BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} ${MAKE_PROGRAM} -j${NPROC} -sC "<SOURCE_DIR>" install)
 set(INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make -j${NPROC} -sC "<SOURCE_DIR>" install)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} ${MAKE_PROGRAM} -j${NPROC} -sC "<SOURCE_DIR>" install)
 
 
 if (DEFINED SODIUM_SOURCE_DIR AND EXISTS ${SODIUM_SOURCE_DIR})
     set(COPY_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/libsodium/")
-    message(STATUS "NECESSARY Copy of sources. Reason: BUILD_IN_SOURCE 1 ExternalProject(libsodium")
-    file(COPY "${SODIUM_SOURCE_DIR}" DESTINATION "${COPY_SRC_DIR}/..")
+    #message(STATUS "NECESSARY Copy of sources. Reason: BUILD_IN_SOURCE 1 ExternalProject(libsodium")
+    #file(COPY "${SODIUM_SOURCE_DIR}" DESTINATION "${COPY_SRC_DIR}/..")
+    add_custom_command(
+        OUTPUT "${COPY_SRC_DIR}/Configure"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${COPY_SRC_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${SODIUM_SOURCE_DIR}"
+            "${COPY_SRC_DIR}"
+        COMMENT "Copying libsodium sources"
+    )
+    add_custom_target(copy-libsodium DEPENDS "${COPY_SRC_DIR}/Configure")
     ExternalProject_Add(libsodium
             SOURCE_DIR ${COPY_SRC_DIR}
-            PREFIX ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            PREFIX ${INSTALL_DIR}
+            DEPENDS copy-libsodium
             CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
             BUILD_COMMAND ${BUILD_COMMAND}
             INSTALL_COMMAND ${INSTALL_COMMAND}
             DOWNLOAD_COMMAND ""
-            BUILD_BYPRODUCTS <INSTALL_DIR>/lib/libsodium.so
+            BUILD_BYPRODUCTS ${INSTALL_DIR}lib/libsodium.so
+            BUILD_IN_SOURCE 1
     )
 else ()
     ExternalProject_Add(libsodium
             URL https://github.com/jedisct1/libsodium/archive/refs/tags/${SODIUM_VERSION}.tar.gz
             URL_HASH SHA256=${SODIUM_SHA}
-            PREFIX ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            PREFIX ${INSTALL_DIR}
             CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
             BUILD_COMMAND ${BUILD_COMMAND}
             INSTALL_COMMAND ${INSTALL_COMMAND}
             DOWNLOAD_EXTRACT_TIMESTAMP 0
-            BUILD_BYPRODUCTS <INSTALL_DIR>/lib/libsodium.so
+            BUILD_BYPRODUCTS ${INSTALL_DIR}/lib/libsodium.so
+            BUILD_IN_SOURCE 1
     )
 endif ()
-ExternalProject_Get_Property(libsodium INSTALL_DIR)
-ExternalProject_Get_Property(libsodium SOURCE_DIR)
+#ExternalProject_Get_Property(libsodium INSTALL_DIR)
+#ExternalProject_Get_Property(libsodium SOURCE_DIR)
+#string(REPLACE "\\" "/" INSTALL_DIR ${INSTALL_DIR})
 
 file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
 
