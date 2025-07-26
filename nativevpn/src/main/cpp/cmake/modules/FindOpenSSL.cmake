@@ -1,24 +1,42 @@
+# OpenSSL Android Build Integration Module
+#
+# This module provides:
+# - Dependency management helpers:
+#     get_current_stack_targets()
+#     add_dependency_to_stack_targets()
+#     watch_deprecated_stack_usage()
+#   to integrate OpenSSL into the build graph and track variable usage
+#
+# - Android ABI-specific OpenSSL target configuration via:
+#     get_openssl_target()
+#
+# - Platform-specific environment setup for build commands (Windows/Unix)
+#
+# - Configuration of OpenSSL build flags for cross-compilation on Android
+#
+# - ExternalProject-based build, install, and import of OpenSSL libraries
+
 function(get_current_stack_targets output_var)
     get_property(targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
     set(${output_var} ${targets} PARENT_SCOPE)
 endfunction()
 
-function(add_dependency_to_stack_targets )
+function(add_dependency_to_stack_targets)
     get_current_stack_targets(TARGETS)
-    foreach(target ${TARGETS})
+    foreach (target ${TARGETS})
         if ("${target}" STREQUAL "openssl" OR "${target}" STREQUAL "copy-openssl")
             #message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
             continue()
-        endif()
+        endif ()
         #message(WARNING "TARGET ${target}")
         add_dependencies(${target} openssl)
-    endforeach()
+    endforeach ()
 endfunction()
 
 function(watch_deprecated_stack_usage var access value current_list_file stack)
-    if(access STREQUAL "READ_ACCESS")
+    if (access STREQUAL "READ_ACCESS")
         add_dependency_to_stack_targets(${stack})
-    endif()
+    endif ()
 endfunction()
 
 variable_watch(OPENSSL_CRYPTO_LIBRARY watch_deprecated_stack_usage)
@@ -60,17 +78,16 @@ get_autoconf_target(AUTOCONF_TARGET)
 
 
 string(REPLACE "\\" "/" INSTALL_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-if(CMAKE_HOST_WIN32)
-    set (ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/openssl_configure_env.bat)
+if (CMAKE_HOST_WIN32)
+    set(ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/openssl_configure_env.bat)
     set(ANDROID_NDK_BACK ${ANDROID_NDK})
     string(REPLACE "C:/" "/cygdrive/c/" ANDROID_NDK "${ANDROID_NDK}")
     create_env_file(${ENV_SCRIPT_CMD} ${CYGWIN_BIN_DIR})
     set(ANDROID_NDK ${ANDROID_NDK_BACK})
-else()
-    set (ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/openssl_configure_env.sh)
+else ()
+    set(ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/openssl_configure_env.sh)
     create_env_file(${ENV_SCRIPT_CMD} "")
-endif()
-
+endif ()
 
 
 set(openssl_configure_flags
@@ -80,12 +97,12 @@ set(openssl_configure_flags
 
 set(OPENSSL_CONFIGURE_COMMAND
         cd "<SOURCE_DIR>" &&
-        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} perl "<SOURCE_DIR>/Configure" ${openssl_configure_flags}
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} perl "<SOURCE_DIR>/Configure" ${openssl_configure_flags}
         "--prefix=${INSTALL_DIR}")
 set(OPENSSL_BUILD_COMMAND
-        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" build_libs)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" build_libs)
 set(OPENSSL_INSTALL_COMMAND
-        ${CMAKE_COMMAND} -E env  ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install_dev install_runtime)
+        ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install_dev install_runtime)
 
 if (DEFINED OPENSSL_SOURCE_DIR AND EXISTS ${OPENSSL_SOURCE_DIR})
     set(OPENSSL_DST_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/openssl")
