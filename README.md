@@ -1,4 +1,3 @@
-# Clone and open in Android Studio on Linux 
 # Dependencies
 For Linux/Unix host
 ```
