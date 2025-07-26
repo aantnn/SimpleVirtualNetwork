@@ -49,7 +49,7 @@ if (DEFINED ICONV_SOURCE_DIR AND EXISTS ${ICONV_SOURCE_DIR})
     add_custom_target(copy-libiconv DEPENDS "${COPY_SRC_DIR}/Configure")
     ExternalProject_Add(libiconv
             SOURCE_DIR ${COPY_SRC_DIR}
-            PREFIX ${INSTALL_DIR}
+            #PREFIX ${INSTALL_DIR}
             DEPENDS copy-libiconv
             CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
             BUILD_COMMAND ${BUILD_COMMAND}
@@ -62,7 +62,7 @@ else ()
     ExternalProject_Add(libiconv
             URL https://ftp.gnu.org/pub/gnu/libiconv/libiconv-${ICONV_VERSION}.tar.gz
             URL_HASH SHA256=${ICONV_SHA}
-            PREFIX ${INSTALL_DIR}
+            #PREFIX ${INSTALL_DIR}
             CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
             BUILD_COMMAND ${BUILD_COMMAND}
             INSTALL_COMMAND ${INSTALL_COMMAND}

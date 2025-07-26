@@ -118,7 +118,7 @@ if (DEFINED OPENSSL_SOURCE_DIR AND EXISTS ${OPENSSL_SOURCE_DIR})
     add_custom_target(copy-openssl DEPENDS "${OPENSSL_DST_SRC_DIR}/Configure")
     ExternalProject_Add(openssl
             SOURCE_DIR ${OPENSSL_DST_SRC_DIR}
-            PREFIX ${INSTALL_DIR}
+            #PREFIX ${INSTALL_DIR}
             DEPENDS copy-openssl
             CONFIGURE_COMMAND ${OPENSSL_CONFIGURE_COMMAND}
             BUILD_COMMAND ${OPENSSL_BUILD_COMMAND}
@@ -133,7 +133,7 @@ else ()
     ExternalProject_Add(openssl
             URL https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
             URL_HASH SHA256=${OPENSSL_SHA_VER}
-            PREFIX ${INSTALL_DIR}
+            #PREFIX ${INSTALL_DIR}
             CONFIGURE_COMMAND ${OPENSSL_CONFIGURE_COMMAND}
             BUILD_COMMAND ${OPENSSL_BUILD_COMMAND}
             INSTALL_COMMAND ${OPENSSL_INSTALL_COMMAND}

@@ -53,7 +53,7 @@ if (DEFINED SODIUM_SOURCE_DIR AND EXISTS ${SODIUM_SOURCE_DIR})
     add_custom_target(copy-libsodium DEPENDS "${COPY_SRC_DIR}/Configure")
     ExternalProject_Add(libsodium
             SOURCE_DIR ${COPY_SRC_DIR}
-            PREFIX ${INSTALL_DIR}
+            #PREFIX ${INSTALL_DIR}
             DEPENDS copy-libsodium
             CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
             BUILD_COMMAND ${BUILD_COMMAND}
@@ -66,7 +66,7 @@ else ()
     ExternalProject_Add(libsodium
             URL https://github.com/jedisct1/libsodium/archive/refs/tags/${SODIUM_VERSION}.tar.gz
             URL_HASH SHA256=${SODIUM_SHA}
-            PREFIX ${INSTALL_DIR}
+            #PREFIX ${INSTALL_DIR}
             CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
             BUILD_COMMAND ${BUILD_COMMAND}
             INSTALL_COMMAND ${INSTALL_COMMAND}
