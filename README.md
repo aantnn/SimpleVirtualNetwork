@@ -12,7 +12,7 @@ Msys GNU make, sed, bash, etc (for bash ./configure)
     - Cygwin does not work armv7a-linux-androideabi{VER}-clang 
     - path like /cygwindrive/c/.. produce not found errors
 ```
-Selecting between Cygwin and Msys tools made by [this](https://github.com/aantnn/SimpleVirtualNetwork/blob/2f415d599c514c58f5886c8e22ede585a46c556c/nativevpn/src/main/cpp/cmake/modules/FindOpenSSL.cmake#L64)
+Selecting between Cygwin and Msys tools made by [this](https://github.com/aantnn/SimpleVirtualNetwork/blob/8c92c126dd26f56077e7162353cbffd21a9106f5/nativevpn/src/main/cpp/cmake/modules/FindOpenSSL.cmake#L85)
 and [this](https://github.com/aantnn/SimpleVirtualNetwork/blob/2f415d599c514c58f5886c8e22ede585a46c556c/nativevpn/src/main/cpp/cmake/modules/CommonAndroidSetup.cmake#L21)
 ```cmake
   create_env_file(${ENV_SCRIPT_CMD} ${CYGWIN_BIN_DIR})
