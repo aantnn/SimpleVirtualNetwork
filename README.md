@@ -3,13 +3,14 @@
 For Linux/Unix host
 ```
 Perl modules: FindBin, IPC::Cmd, File::Compare, File::Copy 
-GNU make, sed, bash (for ./configure)
+GNU make, sed, bash, standart linux tools (for ./configure)
 ```
 For Windows host
 ```
-Cygwin Perl and Perl modules: FindBin, IPC::Cmd, File::Compare, File::Copy - forward slash issues with Openssl's Perl /Configure)
-Msys GNU make, sed, bash (for bash ./configure), Cygwin does not work
-armv7a-linux-androideabi{VER}-clang /cygwindrive/c/.. produce not found errors
+Cygwin Perl and Perl modules: FindBin, IPC::Cmd, File::Compare, File::Copy 
+    - forward slash issues with Openssl's Perl /Configure)
+Msys GNU make, sed, bash, etc (for bash ./configure)
+    - Cygwin does not work armv7a-linux-androideabi{VER}-clang /cygwindrive/c/.. produce not found errors
 ```
 
 # OR Install SDK
