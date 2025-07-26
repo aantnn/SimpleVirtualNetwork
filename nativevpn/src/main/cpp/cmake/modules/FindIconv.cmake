@@ -15,7 +15,7 @@ if(CMAKE_HOST_WIN32)
     create_env_file(${ENV_SCRIPT_CMD} ${MSYS_BIN_DIR})
 else()
     set (ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/configure_env.sh)
-    create_env_file(${ENV_SCRIPT_CMD})
+    create_env_file(${ENV_SCRIPT_CMD} "")
 endif()
 
 # Configure flags for Android build

@@ -68,7 +68,7 @@ if(CMAKE_HOST_WIN32)
     set(ANDROID_NDK ${ANDROID_NDK_BACK})
 else()
     set (ENV_SCRIPT_CMD ${CMAKE_BINARY_DIR}/openssl_configure_env.sh)
-    create_env_file(${ENV_SCRIPT_CMD})
+    create_env_file(${ENV_SCRIPT_CMD} "")
 endif()
 
 
@@ -91,12 +91,12 @@ if (DEFINED OPENSSL_SOURCE_DIR AND EXISTS ${OPENSSL_SOURCE_DIR})
     set(OPENSSL_DST_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/openssl")
     #file(COPY "${OPENSSL_SOURCE_DIR}" DESTINATION "${OPENSSL_DST_SRC_DIR}/..") # The /.. is for overwriting the same dir name
     add_custom_command(
-        OUTPUT "${OPENSSL_DST_SRC_DIR}/Configure"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENSSL_DST_SRC_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            OUTPUT "${OPENSSL_DST_SRC_DIR}/Configure"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENSSL_DST_SRC_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${OPENSSL_SOURCE_DIR}"
             "${OPENSSL_DST_SRC_DIR}"
-        COMMENT "Copying OpenSSL sources"
+            COMMENT "Copying OpenSSL sources"
     )
     add_custom_target(copy-openssl DEPENDS "${OPENSSL_DST_SRC_DIR}/Configure")
     ExternalProject_Add(openssl
