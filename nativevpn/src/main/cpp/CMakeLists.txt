@@ -133,17 +133,17 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
         android
         log
         OpenSSL::SSL
-        OpenSSL::Crypto
-        sodium
-        iconv
-        mayaqua
-        cedar
-        vpnclient
+       OpenSSL::Crypto
+       sodium
+       iconv
+       mayaqua
+       cedar
+       vpnclient
 )
 # Build Hamcore
-#[[include(${CMAKE_CURRENT_LIST_DIR}/cmake/modules/hamcore_builder.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/modules/hamcore_builder.cmake)
 build_hamcore_se2(
         "${SOFTETHERVPN_SOURCE_DIR}"
         "${CMAKE_SOURCE_DIR}/../res/raw"
-)]]
-#add_dependencies(nativevpn hamcore-archive)
+)
+add_dependencies(nativevpn hamcore-archive)
