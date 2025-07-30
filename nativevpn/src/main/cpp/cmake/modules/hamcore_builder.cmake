@@ -35,7 +35,7 @@ add_subdirectory(\${TOP_DIRECTORY}/src/hamcorebuilder hamcorebuilder)
 
 if(WIN32)
     set(ZLIB_DLL_TO_COPY \"$<IF:$<CONFIG:Debug>,zlibd1.dll,zlib1.dll>\")
-    add_custom_target(copy_zlib_dll_\${OUTPUT_CONFIG}
+    add_custom_target(copy_zlib_dll
             COMMAND  \${CMAKE_COMMAND} -E make_directory  \"\$<TARGET_FILE_DIR:hamcorebuilder>\"
             COMMAND \${CMAKE_COMMAND} -E copy_if_different
                 \"\${INSTALL_DIR}/bin/\${ZLIB_DLL_TO_COPY}\"
@@ -43,14 +43,18 @@ if(WIN32)
             COMMENT \"Copying \${ZLIB_DLL_TO_COPY} to output directory for \${CMAKE_CURRENT_BINARY_DIR}/\$<CONFIG>\"
             VERBATIM
     )
-    add_dependencies(copy_zlib_dll_\${OUTPUT_CONFIG} ZLIB::ZLIB)
+    add_dependencies(copy_zlib_dll ZLIB::ZLIB)
 endif()
 
 # hamcore.se2 archive file
 add_custom_target(hamcore-archive-build ALL
     DEPENDS \"${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}\"
 )
-add_dependencies(hamcore-archive-build copy_zlib_dll_\${OUTPUT_CONFIG} hamcorebuilder)
+if(WIN32)
+    add_dependencies(hamcore-archive-build copy_zlib_dll hamcorebuilder)
+else()
+    add_dependencies(hamcore-archive-build hamcorebuilder)
+endif()
 add_custom_command(
     OUTPUT \"${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}\"
     COMMAND hamcorebuilder

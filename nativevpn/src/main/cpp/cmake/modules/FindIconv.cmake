@@ -44,7 +44,7 @@ if (DEFINED ICONV_SOURCE_DIR AND EXISTS ${ICONV_SOURCE_DIR})
             "${ICONV_SOURCE_DIR}"
             "${COPY_SRC_DIR}"
         COMMENT "Copying libiconv sources"
-        BYPRODUCTS "${COPY_SRC_DIR}" 
+        BYPRODUCTS "${COPY_SRC_DIR}"
     )
     add_custom_target(copy-libiconv DEPENDS "${COPY_SRC_DIR}/Configure")
     ExternalProject_Add(libiconv
