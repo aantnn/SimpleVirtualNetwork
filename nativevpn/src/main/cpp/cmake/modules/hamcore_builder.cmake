@@ -8,6 +8,12 @@ function(build_hamcore_se2  SOFTETHER_SOURCE_DIR  DESTINATION_DIR)
     string(REPLACE "." "_" SOFTETHERVPN_VERSION_CLEAN "${SOFTETHERVPN_VERSION}")
     set(HAMCORE_SE2_FILENAME "hamcore_se2_${SOFTETHERVPN_VERSION_CLEAN}")
 
+    if(EXISTS "${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}")
+        message(STATUS "hamcore archive already exists at ${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}, skipping build_hamcore_se2.")
+        add_custom_target(hamcore-archive ALL)
+        return()
+    endif()
+
     # Create temporary CMakeLists.txt with absolute paths
     set(TEMP_CMAKE_FILE "${BUILD_DIRECTORY}/CMakeLists.txt")
     file(WRITE "${TEMP_CMAKE_FILE}" "
@@ -69,7 +75,7 @@ add_custom_command(
 
     # Custom command to build the hamcore builder
     add_custom_command(
-        OUTPUT "${BUILD_DIRECTORY}/${HAMCORE_SE2_FILENAME}"
+        OUTPUT "${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}"
         COMMAND ${CMAKE_COMMAND} --build "${BUILD_DIRECTORY}" --config ${CMAKE_BUILD_TYPE}
         DEPENDS "${BUILD_DIRECTORY}/CMakeCache.txt"
                 "${TOP_DIRECTORY}/src/bin/hamcore"
@@ -80,6 +86,6 @@ add_custom_command(
 
     # Main target that depends on the archive
     add_custom_target(hamcore-archive ALL
-        DEPENDS "${BUILD_DIRECTORY}/${HAMCORE_SE2_FILENAME}"
+        DEPENDS "${DESTINATION_DIR}/${HAMCORE_SE2_FILENAME}"
     )
 endfunction()
