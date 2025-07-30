@@ -4,7 +4,8 @@ For Linux/Unix host
 Perl modules: FindBin, IPC::Cmd, File::Compare, File::Copy 
 GNU make, sed, bash, minimal standart linux tools (for ./configure)
 ```
-For Windows host
+For Windows host<br>
+It builds much slower... Probably because of ported linux tools
 ```
 Cygwin GNU make, Perl and Perl modules: FindBin, IPC::Cmd, File::Compare, File::Copy 
     - forward slash issues with Openssl's Perl /Configure)
