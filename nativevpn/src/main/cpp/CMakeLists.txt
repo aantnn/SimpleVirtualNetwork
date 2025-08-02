@@ -84,7 +84,7 @@ execute_process(
         ERROR_QUIET
 )
 if(NOT git_reverse_check EQUAL "0")
-        #[[execute_process(
+        execute_process(
                 COMMAND ${GIT_EXECUTABLE} apply "${CMAKE_CURRENT_SOURCE_DIR}/deps/softethervpn.patch"
                 WORKING_DIRECTORY "${SOFTETHERVPN_SOURCE_DIR}"
                 RESULT_VARIABLE git_apply_result
@@ -93,7 +93,7 @@ if(NOT git_reverse_check EQUAL "0")
 
         if(NOT git_apply_result EQUAL "0")
                 message(FATAL_ERROR "Failed to apply patch:\n${git_error_output}")
-        endif()]]
+        endif()
 endif()
 
 # Curses configuration
@@ -133,12 +133,12 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
         android
         log
         OpenSSL::SSL
-       OpenSSL::Crypto
-       sodium
-       iconv
-       mayaqua
-       cedar
-       vpnclient
+        OpenSSL::Crypto
+        sodium
+        iconv
+        mayaqua
+        cedar
+        vpnclient
 )
 # Build Hamcore
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/modules/hamcore_builder.cmake)
