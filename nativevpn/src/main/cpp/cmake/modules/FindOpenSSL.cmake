@@ -104,18 +104,18 @@ set(OPENSSL_BUILD_COMMAND
 set(OPENSSL_INSTALL_COMMAND
         ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install_dev install_runtime)
 
+
 if (DEFINED OPENSSL_SOURCE_DIR AND EXISTS ${OPENSSL_SOURCE_DIR})
     set(OPENSSL_DST_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/openssl")
-    #file(COPY "${OPENSSL_SOURCE_DIR}" DESTINATION "${OPENSSL_DST_SRC_DIR}/..") # The /.. is for overwriting the same dir name
-    add_custom_command(
-            OUTPUT "${OPENSSL_DST_SRC_DIR}/Configure"
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENSSL_DST_SRC_DIR}"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
+    set(SOURCE_HASH_FILE "${CMAKE_CURRENT_BINARY_DIR}/src/openssl/.source_hash")
+    check_source_hash_changed("${OPENSSL_SOURCE_DIR}" "${SOURCE_HASH_FILE}" FORCE_COPY)
+    add_source_copy_target_and_copy(
+            copy-openssl
             "${OPENSSL_SOURCE_DIR}"
             "${OPENSSL_DST_SRC_DIR}"
-            COMMENT "Copying OpenSSL sources"
+            ${FORCE_COPY}
+            "OpenSSL (${ANDROID_ABI})"
     )
-    add_custom_target(copy-openssl DEPENDS "${OPENSSL_DST_SRC_DIR}/Configure")
     ExternalProject_Add(openssl
             SOURCE_DIR ${OPENSSL_DST_SRC_DIR}
             #PREFIX ${INSTALL_DIR}

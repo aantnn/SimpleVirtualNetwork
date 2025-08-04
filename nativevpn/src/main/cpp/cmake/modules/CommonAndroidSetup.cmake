@@ -59,3 +59,73 @@ endif()
 endfunction()
 
 
+function(compute_directory_hash dir output_var)
+    if(NOT EXISTS "${dir}")
+        set(${output_var} "not_found" PARENT_SCOPE)
+        return()
+    endif()
+
+    file(GLOB_RECURSE all_files RELATIVE "${dir}" "${dir}/*")
+    unset(hash_input)
+    foreach(file IN LISTS all_files)
+        get_filename_component(filepath "${dir}/${file}" ABSOLUTE)
+        if(EXISTS "${filepath}")
+            file(SIZE "${filepath}" file_size)
+            file(TIMESTAMP "${filepath}" file_time "%Y-%m-%d %H:%M:%S" UTC)
+            string(APPEND hash_input "${file}|${file_size}|${file_time}\n")
+        endif()
+    endforeach()
+
+    string(SHA256 dir_hash "${hash_input}")
+    set(${output_var} "${dir_hash}" PARENT_SCOPE)
+endfunction()
+
+function(check_source_hash_changed source_dir hash_file result_var)
+    compute_directory_hash("${source_dir}" CURRENT_SOURCE_HASH)
+    set(${result_var} FALSE PARENT_SCOPE)
+
+    if(NOT EXISTS "${hash_file}")
+        set(${result_var} TRUE PARENT_SCOPE)
+        file(WRITE "${hash_file}" "${CURRENT_SOURCE_HASH}")
+    else()
+        file(READ "${hash_file}" OLD_SOURCE_HASH)
+        string(STRIP "${OLD_SOURCE_HASH}" OLD_SOURCE_HASH)
+        string(STRIP "${CURRENT_SOURCE_HASH}" CURRENT_SOURCE_HASH)
+
+        if(NOT OLD_SOURCE_HASH STREQUAL CURRENT_SOURCE_HASH)
+            set(${result_var} TRUE PARENT_SCOPE)
+            file(WRITE "${hash_file}" "${CURRENT_SOURCE_HASH}")
+        endif()
+    endif()
+endfunction()
+
+function(add_source_copy_target_and_copy
+        target_name
+        source_dir
+        dest_dir
+        force_copy
+        comment_prefix
+)
+    if(force_copy)
+        add_custom_command(
+                OUTPUT "${dest_dir}/.source_copy_done"
+                COMMAND ${CMAKE_COMMAND} -E remove_directory "${dest_dir}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${dest_dir}"
+                COMMAND ${CMAKE_COMMAND} -E copy_directory "${source_dir}" "${dest_dir}"
+                COMMAND ${CMAKE_COMMAND} -E touch "${dest_dir}/.source_copy_done"
+                COMMENT "${comment_prefix} - Copying sources..."
+                VERBATIM
+        )
+    else()
+        add_custom_command(
+                OUTPUT "${dest_dir}/.source_copy_done"
+                COMMAND ${CMAKE_COMMAND} -E touch "${dest_dir}/.source_copy_done"
+                COMMENT "${comment_prefix} - Sources unchanged, skipping copy."
+                VERBATIM
+        )
+    endif()
+
+    add_custom_target(${target_name}
+            DEPENDS "${dest_dir}/.source_copy_done"
+    )
+endfunction()

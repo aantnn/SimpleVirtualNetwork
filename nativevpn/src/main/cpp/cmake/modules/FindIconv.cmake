@@ -36,17 +36,15 @@ set(INSTALL_COMMAND
 #BUILD_IN_SOURCE 1 SO COPY
 if (DEFINED ICONV_SOURCE_DIR AND EXISTS ${ICONV_SOURCE_DIR})
     set(COPY_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/iconv")
-    #file(COPY "${ICONV_SOURCE_DIR}" DESTINATION "${COPY_SRC_DIR}/..")
-    add_custom_command(
-        OUTPUT "${COPY_SRC_DIR}/Configure"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${COPY_SRC_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
+    set(SOURCE_HASH_FILE "${CMAKE_CURRENT_BINARY_DIR}/src/iconv/.source_hash")
+    check_source_hash_changed("${ICONV_SOURCE_DIR}" "${SOURCE_HASH_FILE}" FORCE_COPY)
+    add_source_copy_target_and_copy(
+            copy-libiconv
             "${ICONV_SOURCE_DIR}"
             "${COPY_SRC_DIR}"
-        COMMENT "Copying libiconv sources"
-        BYPRODUCTS "${COPY_SRC_DIR}"
+            ${FORCE_COPY}
+            "Iconv (${ANDROID_ABI})"
     )
-    add_custom_target(copy-libiconv DEPENDS "${COPY_SRC_DIR}/Configure")
     ExternalProject_Add(libiconv
             SOURCE_DIR ${COPY_SRC_DIR}
             #PREFIX ${INSTALL_DIR}

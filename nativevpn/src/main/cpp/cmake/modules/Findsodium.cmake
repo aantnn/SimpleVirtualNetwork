@@ -38,19 +38,20 @@ set(INSTALL_COMMAND
         ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install)
 
 
+
 if (DEFINED SODIUM_SOURCE_DIR AND EXISTS ${SODIUM_SOURCE_DIR})
     set(COPY_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/libsodium/")
     #message(STATUS "NECESSARY Copy of sources. Reason: BUILD_IN_SOURCE 1 ExternalProject(libsodium")
     #file(COPY "${SODIUM_SOURCE_DIR}" DESTINATION "${COPY_SRC_DIR}/..")
-    add_custom_command(
-        OUTPUT "${COPY_SRC_DIR}/Configure"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${COPY_SRC_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
+    set(SOURCE_HASH_FILE "${CMAKE_CURRENT_BINARY_DIR}/src/libsodium/.source_hash")
+    check_source_hash_changed("${SODIUM_SOURCE_DIR}" "${SOURCE_HASH_FILE}" FORCE_COPY)
+    add_source_copy_target_and_copy(
+            copy-libsodium
             "${SODIUM_SOURCE_DIR}"
             "${COPY_SRC_DIR}"
-        COMMENT "Copying libsodium sources"
+            ${FORCE_COPY}
+            "Sodium (${ANDROID_ABI})"
     )
-    add_custom_target(copy-libsodium DEPENDS "${COPY_SRC_DIR}/Configure")
     ExternalProject_Add(libsodium
             SOURCE_DIR ${COPY_SRC_DIR}
             #PREFIX ${INSTALL_DIR}
