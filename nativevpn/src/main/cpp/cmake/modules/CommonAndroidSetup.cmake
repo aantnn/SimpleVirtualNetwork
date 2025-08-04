@@ -67,9 +67,10 @@ function(force_global_dependency DEPENDENCY)
     get_property(all_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
     list(FILTER all_targets EXCLUDE REGEX "^copy-")
     list(REMOVE_ITEM all_targets ${DEPENDENCY})
-    if(all_targets)
-        add_dependencies(${all_targets} ${DEPENDENCY})
-    endif()
+
+    foreach(target IN LISTS all_targets)
+        add_dependencies(${target} ${DEPENDENCY})
+    endforeach ()
 endfunction()
 
 
