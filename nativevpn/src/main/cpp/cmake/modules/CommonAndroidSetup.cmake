@@ -119,7 +119,7 @@ function(add_source_copy_target_and_copy
     else()
         add_custom_command(
                 OUTPUT "${dest_dir}/.source_copy_done"
-                COMMAND ${CMAKE_COMMAND} -E echsmall fix "${dest_dir}/.source_copy_done"
+                COMMAND ${CMAKE_COMMAND} -E echo "${dest_dir}/.source_copy_done"
                 COMMENT "${comment_prefix} - Sources unchanged, skipping copy."
                 VERBATIM
         )
