@@ -58,6 +58,20 @@ exit $?")
 endif()
 endfunction()
 
+function(get_current_build_targets OUTPUT_VAR)
+    get_property(targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    set(${OUTPUT_VAR} ${targets} PARENT_SCOPE)
+endfunction()
+
+function(force_global_dependency DEPENDENCY)
+    get_property(all_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    list(FILTER all_targets EXCLUDE REGEX "^copy-")
+    list(REMOVE_ITEM all_targets ${DEPENDENCY})
+    if(all_targets)
+        add_dependencies(${all_targets} ${DEPENDENCY})
+    endif()
+endfunction()
+
 
 function(compute_directory_hash dir output_var)
     if(NOT EXISTS "${dir}")
@@ -128,4 +142,64 @@ function(add_source_copy_target_and_copy
     add_custom_target(${target_name}
             DEPENDS "${dest_dir}/.source_copy_done"
     )
+endfunction()
+
+include(ExternalProject)
+function(add_external_project)
+    set(options "")
+    set(oneValueArgs
+            PROJECT_NAME
+            SOURCE_DIR
+            VERSION
+            URL
+            SHA256
+            INSTALL_DIR
+    )
+    set(multiValueArgs
+            CONFIGURE_COMMAND
+            BUILD_COMMAND
+            INSTALL_COMMAND
+            BUILD_BYPRODUCTS
+            DEPENDS
+    )
+    cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    if(ARG_SOURCE_DIR)
+        # Local source copy mode
+        set(DST_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/${ARG_PROJECT_NAME}")
+        set(SOURCE_HASH_FILE "${DST_SRC_DIR}/.source_hash")
+
+        check_source_hash_changed("${ARG_SOURCE_DIR}" "${SOURCE_HASH_FILE}" FORCE_COPY)
+
+        add_source_copy_target_and_copy(
+                copy-${ARG_PROJECT_NAME}
+                "${ARG_SOURCE_DIR}"
+                "${DST_SRC_DIR}"
+                ${FORCE_COPY}
+                "${ARG_PROJECT_NAME} (${ANDROID_ABI})"
+        )
+
+        ExternalProject_Add(${ARG_PROJECT_NAME}
+                SOURCE_DIR ${DST_SRC_DIR}
+                DEPENDS copy-${ARG_PROJECT_NAME} ${ARG_DEPENDS}
+                CONFIGURE_COMMAND ${ARG_CONFIGURE_COMMAND}
+                BUILD_COMMAND ${ARG_BUILD_COMMAND}
+                INSTALL_COMMAND ${ARG_INSTALL_COMMAND}
+                DOWNLOAD_COMMAND ""
+                BUILD_BYPRODUCTS ${ARG_BUILD_BYPRODUCTS}
+                BUILD_IN_SOURCE 1
+        )
+    else()
+        ExternalProject_Add(${ARG_PROJECT_NAME}
+                URL ${ARG_URL}
+                URL_HASH SHA256=${ARG_SHA256}
+                CONFIGURE_COMMAND ${ARG_CONFIGURE_COMMAND}
+                BUILD_COMMAND ${ARG_BUILD_COMMAND}
+                INSTALL_COMMAND ${ARG_INSTALL_COMMAND}
+                DOWNLOAD_EXTRACT_TIMESTAMP 0
+                BUILD_BYPRODUCTS ${ARG_BUILD_BYPRODUCTS}
+                BUILD_IN_SOURCE 1
+                DEPENDS ${ARG_DEPENDS}
+        )
+    endif()
 endfunction()

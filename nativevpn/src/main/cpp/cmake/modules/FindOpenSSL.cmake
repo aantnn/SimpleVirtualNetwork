@@ -16,33 +16,18 @@
 #
 # - ExternalProject-based build, install, and import of OpenSSL libraries
 
-function(get_current_stack_targets output_var)
-    get_property(targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
-    set(${output_var} ${targets} PARENT_SCOPE)
+include(${CMAKE_CURRENT_LIST_DIR}/CommonAndroidSetup.cmake)
+
+function(handle_dependency_trigger VAR ACCESS VALUE CURRENT_FILE STACK)
+    if(ACCESS STREQUAL "READ_ACCESS")
+        force_global_dependency(openssl)
+    endif()
 endfunction()
 
-function(add_dependency_to_stack_targets)
-    get_current_stack_targets(TARGETS)
-    foreach (target ${TARGETS})
-        if ("${target}" STREQUAL "openssl" OR "${target}" STREQUAL "copy-openssl")
-            #message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
-            continue()
-        endif ()
-        #message(WARNING "TARGET ${target}")
-        add_dependencies(${target} openssl)
-    endforeach ()
-endfunction()
-
-function(watch_deprecated_stack_usage var access value current_list_file stack)
-    if (access STREQUAL "READ_ACCESS")
-        add_dependency_to_stack_targets(${stack})
-    endif ()
-endfunction()
-
-variable_watch(OPENSSL_CRYPTO_LIBRARY watch_deprecated_stack_usage)
-variable_watch(OPENSSL_SSL_LIBRARY watch_deprecated_stack_usage)
-variable_watch(OPENSSL_INCLUDE_DIR watch_deprecated_stack_usage)
-variable_watch(OPENSSL_INSTALL_PREFIX watch_deprecated_stack_usage)
+variable_watch(OPENSSL_CRYPTO_LIBRARY handle_dependency_trigger)
+variable_watch(OPENSSL_SSL_LIBRARY handle_dependency_trigger)
+variable_watch(OPENSSL_INCLUDE_DIR handle_dependency_trigger)
+variable_watch(OPENSSL_INSTALL_PREFIX handle_dependency_trigger)
 
 find_path(OPENSSL_INCLUDE_DIR openssl.h)
 find_library(OPENSSL_SSL_LIBRARY OpenSSL::SSL)
@@ -54,7 +39,7 @@ if (OPENSSL_FOUND OR TARGET OpenSSL::Crypto)
     return()
 endif ()
 
-include(ExternalProject)
+
 
 set(OPENSSL_VERSION $ENV{OPENSSL_VERSION})
 set(OPENSSL_SHA_VER "$ENV{OPENSSL_SHA}")
@@ -73,7 +58,7 @@ endfunction()
 
 get_openssl_target(OPENSSL_TARGET)
 
-include(${CMAKE_CURRENT_LIST_DIR}/CommonAndroidSetup.cmake)
+
 get_autoconf_target(AUTOCONF_TARGET)
 
 
@@ -105,46 +90,20 @@ set(OPENSSL_INSTALL_COMMAND
         ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install_dev install_runtime)
 
 
-if (DEFINED OPENSSL_SOURCE_DIR AND EXISTS ${OPENSSL_SOURCE_DIR})
-    set(OPENSSL_DST_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/openssl")
-    set(SOURCE_HASH_FILE "${CMAKE_CURRENT_BINARY_DIR}/src/openssl/.source_hash")
-    check_source_hash_changed("${OPENSSL_SOURCE_DIR}" "${SOURCE_HASH_FILE}" FORCE_COPY)
-    add_source_copy_target_and_copy(
-            copy-openssl
-            "${OPENSSL_SOURCE_DIR}"
-            "${OPENSSL_DST_SRC_DIR}"
-            ${FORCE_COPY}
-            "OpenSSL (${ANDROID_ABI})"
-    )
-    ExternalProject_Add(openssl
-            SOURCE_DIR ${OPENSSL_DST_SRC_DIR}
-            #PREFIX ${INSTALL_DIR}
-            DEPENDS copy-openssl
-            CONFIGURE_COMMAND ${OPENSSL_CONFIGURE_COMMAND}
-            BUILD_COMMAND ${OPENSSL_BUILD_COMMAND}
-            INSTALL_COMMAND ${OPENSSL_INSTALL_COMMAND}
-            DOWNLOAD_COMMAND ""
-            BUILD_BYPRODUCTS
-            ${INSTALL_DIR}/lib/libssl.so
-            ${INSTALL_DIR}/lib/libcrypto.so
-            BUILD_IN_SOURCE 1
-    )
-else ()
-    ExternalProject_Add(openssl
-            URL https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
-            URL_HASH SHA256=${OPENSSL_SHA_VER}
-            #PREFIX ${INSTALL_DIR}
-            CONFIGURE_COMMAND ${OPENSSL_CONFIGURE_COMMAND}
-            BUILD_COMMAND ${OPENSSL_BUILD_COMMAND}
-            INSTALL_COMMAND ${OPENSSL_INSTALL_COMMAND}
-            DOWNLOAD_EXTRACT_TIMESTAMP 0
-            BUILD_BYPRODUCTS
-            ${INSTALL_DIR}/lib/libssl.so
-            ${INSTALL_DIR}/lib/libcrypto.so
-            BUILD_IN_SOURCE 1
-    )
-endif ()
-
+add_external_project(
+        PROJECT_NAME openssl
+        SOURCE_DIR "${OPENSSL_SOURCE_DIR}"
+        VERSION "${OPENSSL_VERSION}"
+        URL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz"
+        SHA256 "${OPENSSL_SHA_VER}"
+        INSTALL_DIR "${INSTALL_DIR}"
+        CONFIGURE_COMMAND "${OPENSSL_CONFIGURE_COMMAND}"
+        BUILD_COMMAND "${OPENSSL_BUILD_COMMAND}"
+        INSTALL_COMMAND "${OPENSSL_INSTALL_COMMAND}"
+        BUILD_BYPRODUCTS
+        "${INSTALL_DIR}/lib/libssl.so"
+        "${INSTALL_DIR}/lib/libcrypto.so"
+)
 
 #ExternalProject_Get_Property(openssl INSTALL_DIR)
 #string(REPLACE "\\" "/" OPENSSL_INSTALL_DIR ${INSTALL_DIR})

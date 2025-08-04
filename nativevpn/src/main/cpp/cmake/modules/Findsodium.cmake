@@ -26,8 +26,6 @@ if (ANDROID_ABI STREQUAL "arm64-v8a")
     list(APPEND configure_command ${configure_command} CFLAGS=-march=armv8-a+crypto+aes)
 endif ()
 
-
-
 set(CONFIGURE_COMMAND
         cd "<SOURCE_DIR>" &&
         ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} bash "<SOURCE_DIR>/configure" ${configure_flags}
@@ -38,47 +36,20 @@ set(INSTALL_COMMAND
         ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install)
 
 
-
-if (DEFINED SODIUM_SOURCE_DIR AND EXISTS ${SODIUM_SOURCE_DIR})
-    set(COPY_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/libsodium/")
-    #message(STATUS "NECESSARY Copy of sources. Reason: BUILD_IN_SOURCE 1 ExternalProject(libsodium")
-    #file(COPY "${SODIUM_SOURCE_DIR}" DESTINATION "${COPY_SRC_DIR}/..")
-    set(SOURCE_HASH_FILE "${CMAKE_CURRENT_BINARY_DIR}/src/libsodium/.source_hash")
-    check_source_hash_changed("${SODIUM_SOURCE_DIR}" "${SOURCE_HASH_FILE}" FORCE_COPY)
-    add_source_copy_target_and_copy(
-            copy-libsodium
-            "${SODIUM_SOURCE_DIR}"
-            "${COPY_SRC_DIR}"
-            ${FORCE_COPY}
-            "Sodium (${ANDROID_ABI})"
-    )
-    ExternalProject_Add(libsodium
-            SOURCE_DIR ${COPY_SRC_DIR}
-            #PREFIX ${INSTALL_DIR}
-            DEPENDS copy-libsodium
-            CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
-            BUILD_COMMAND ${BUILD_COMMAND}
-            INSTALL_COMMAND ${INSTALL_COMMAND}
-            DOWNLOAD_COMMAND ""
-            BUILD_BYPRODUCTS ${INSTALL_DIR}/lib/libsodium.so  ${INSTALL_DIR}/include/sodium.h
-            BUILD_IN_SOURCE 1
-    )
-else ()
-    ExternalProject_Add(libsodium
-            URL https://github.com/jedisct1/libsodium/archive/refs/tags/${SODIUM_VERSION}.tar.gz
-            URL_HASH SHA256=${SODIUM_SHA}
-            #PREFIX ${INSTALL_DIR}
-            CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
-            BUILD_COMMAND ${BUILD_COMMAND}
-            INSTALL_COMMAND ${INSTALL_COMMAND}
-            DOWNLOAD_EXTRACT_TIMESTAMP 0
-            BUILD_BYPRODUCTS ${INSTALL_DIR}/lib/libsodium.so  ${INSTALL_DIR}/include/sodium.h
-            BUILD_IN_SOURCE 1
-    )
-endif ()
-#ExternalProject_Get_Property(libsodium INSTALL_DIR)
-#ExternalProject_Get_Property(libsodium SOURCE_DIR)
-#string(REPLACE "\\" "/" INSTALL_DIR ${INSTALL_DIR})
+add_external_project(
+        PROJECT_NAME libsodium
+        SOURCE_DIR "${SODIUM_SOURCE_DIR}"
+        VERSION "${SODIUM_VERSION}"
+        URL "https://github.com/jedisct1/libsodium/archive/refs/tags/${SODIUM_VERSION}.tar.gz"
+        SHA256 "${SODIUM_SHA}"
+        INSTALL_DIR "${INSTALL_DIR}"
+        CONFIGURE_COMMAND "${CONFIGURE_COMMAND}"
+        BUILD_COMMAND "${BUILD_COMMAND}"
+        INSTALL_COMMAND "${INSTALL_COMMAND}"
+        BUILD_BYPRODUCTS
+            ${INSTALL_DIR}/lib/libsodium.so
+            ${INSTALL_DIR}/include/sodium.h
+)
 
 file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
 
@@ -100,29 +71,11 @@ find_package_handle_standard_args(sodium
         REQUIRED_VARS SODIUM_INCLUDE_DIRS SODIUM_LIBRARIES SODIUM_LINK_LIBRARIES
 )
 
-
-
-function(get_current_stack_targets output_var)
-    get_property(targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
-    set(${output_var} ${targets} PARENT_SCOPE)
-endfunction()
-
-function(add_dependency_to_stack_targets )
-    get_current_stack_targets(TARGETS)
-    foreach(target ${TARGETS})
-        if ("${target}" STREQUAL "libsodium" OR "${target}" STREQUAL "copy-libsodium")
-            #message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
-            continue()
-        endif()
-        add_dependencies(${target} libsodium)
-    endforeach()
-endfunction()
-
-function(watch_deprecated_stack_usage var access value current_list_file stack)
-    if(access STREQUAL "READ_ACCESS")
-        add_dependency_to_stack_targets(${stack})
+function(handle_dependency_trigger VAR ACCESS VALUE CURRENT_FILE STACK)
+    if(ACCESS STREQUAL "READ_ACCESS")
+        force_global_dependency(libsodium)
     endif()
 endfunction()
-variable_watch(SODIUM_INCLUDE_DIRS watch_deprecated_stack_usage)
-variable_watch(SODIUM_LIBRARIES watch_deprecated_stack_usage)
-variable_watch(SODIUM_LINK_LIBRARIES watch_deprecated_stack_usage)
+variable_watch(SODIUM_INCLUDE_DIRS handle_dependency_trigger)
+variable_watch(SODIUM_LIBRARIES handle_dependency_trigger)
+variable_watch(SODIUM_LINK_LIBRARIES handle_dependency_trigger)

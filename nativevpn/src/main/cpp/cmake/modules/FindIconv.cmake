@@ -33,46 +33,19 @@ set(BUILD_COMMAND
 set(INSTALL_COMMAND
         ${CMAKE_COMMAND} -E env ${ENV_SCRIPT_CMD} make "-j${NPROC}" -sC "<SOURCE_DIR>" install)
 
-#BUILD_IN_SOURCE 1 SO COPY
-if (DEFINED ICONV_SOURCE_DIR AND EXISTS ${ICONV_SOURCE_DIR})
-    set(COPY_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/iconv")
-    set(SOURCE_HASH_FILE "${CMAKE_CURRENT_BINARY_DIR}/src/iconv/.source_hash")
-    check_source_hash_changed("${ICONV_SOURCE_DIR}" "${SOURCE_HASH_FILE}" FORCE_COPY)
-    add_source_copy_target_and_copy(
-            copy-libiconv
-            "${ICONV_SOURCE_DIR}"
-            "${COPY_SRC_DIR}"
-            ${FORCE_COPY}
-            "Iconv (${ANDROID_ABI})"
-    )
-    ExternalProject_Add(libiconv
-            SOURCE_DIR ${COPY_SRC_DIR}
-            #PREFIX ${INSTALL_DIR}
-            DEPENDS copy-libiconv
-            CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
-            BUILD_COMMAND ${BUILD_COMMAND}
-            INSTALL_COMMAND ${INSTALL_COMMAND}
-            DOWNLOAD_COMMAND ""
-            BUILD_BYPRODUCTS ${INSTALL_DIR}/lib/libiconv.so
-            BUILD_IN_SOURCE 1
-    )
-else ()
-    ExternalProject_Add(libiconv
-            URL https://ftp.gnu.org/pub/gnu/libiconv/libiconv-${ICONV_VERSION}.tar.gz
-            URL_HASH SHA256=${ICONV_SHA}
-            #PREFIX ${INSTALL_DIR}
-            CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
-            BUILD_COMMAND ${BUILD_COMMAND}
-            INSTALL_COMMAND ${INSTALL_COMMAND}
-            DOWNLOAD_EXTRACT_TIMESTAMP 0
-            BUILD_BYPRODUCTS ${INSTALL_DIR}/lib/libiconv.so
-            BUILD_IN_SOURCE 1
-    )
-endif ()
-#ExternalProject_Get_Property(libiconv INSTALL_DIR)
-#ExternalProject_Get_Property(libiconv SOURCE_DIR)
-
-
+add_external_project(
+        PROJECT_NAME libiconv
+        SOURCE_DIR "${ICONV_SOURCE_DIR}"
+        VERSION "${ICONV_VERSION}"
+        URL "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-${ICONV_VERSION}.tar.gz"
+        SHA256 "${ICONV_SHA}"
+        INSTALL_DIR "${INSTALL_DIR}"
+        CONFIGURE_COMMAND "${CONFIGURE_COMMAND}"
+        BUILD_COMMAND "${BUILD_COMMAND}"
+        INSTALL_COMMAND "${INSTALL_COMMAND}"
+        BUILD_BYPRODUCTS
+        "${INSTALL_DIR}/lib/libiconv.so"
+)
 
 file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
 #file(MAKE_DIRECTORY ${INSTALL_DIR}/lib)
@@ -100,31 +73,18 @@ set(Iconv_LIBRARIES ${ICONV_LIBRARY})
 set(Iconv_FOUND ${ICONV_FOUND})
 
 
-function(get_current_stack_targets output_var)
-    get_property(targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
-    set(${output_var} ${targets} PARENT_SCOPE)
-endfunction()
 
-function(add_dependency_to_stack_targets )
-    get_current_stack_targets(TARGETS)
-    foreach(target ${TARGETS})
-        if ("${target}" STREQUAL "libiconv" OR "${target}" STREQUAL "copy-libiconv")
-            #message(WARNING "Something wrong happened. Cannot add target openssl to openssl target\nSTACK:${stack}\n")
-            continue()
-        endif()
-        add_dependencies(${target} libiconv)
-    endforeach()
-endfunction()
 
-function(watch_deprecated_stack_usage var access value current_list_file stack)
-    if(access STREQUAL "READ_ACCESS")
-        add_dependency_to_stack_targets(${stack})
+function(handle_dependency_trigger VAR ACCESS VALUE CURRENT_FILE STACK)
+    if(ACCESS STREQUAL "READ_ACCESS")
+        force_global_dependency(libiconv)
     endif()
 endfunction()
-variable_watch(Iconv_INCLUDE_DIRS watch_deprecated_stack_usage)
-variable_watch(Iconv_LIBRARIES watch_deprecated_stack_usage)
-variable_watch(Iconv_FOUND watch_deprecated_stack_usage)
-variable_watch(ICONV_INCLUDE_DIR watch_deprecated_stack_usage)
-variable_watch(ICONV_LIBRARY watch_deprecated_stack_usage)
-variable_watch(LIB_ICONV watch_deprecated_stack_usage)
+
+variable_watch(Iconv_INCLUDE_DIRS handle_dependency_trigger)
+variable_watch(Iconv_LIBRARIES handle_dependency_trigger)
+variable_watch(Iconv_FOUND handle_dependency_trigger)
+variable_watch(ICONV_INCLUDE_DIR handle_dependency_trigger)
+variable_watch(ICONV_LIBRARY handle_dependency_trigger)
+variable_watch(LIB_ICONV handle_dependency_trigger)
 
