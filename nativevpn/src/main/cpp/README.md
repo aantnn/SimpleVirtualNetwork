@@ -1,8 +1,10 @@
-```bash
+To test if compiling is working
 
+```bash
+#!/bin/bash
 # Base directories
-SDK_DIR="/var/home/a/Android/Sdk"
-PROJECT_DIR="/var/home/a/AndroidStudioProjects/SimpleVirtualNetwork/nativevpn"
+SDK_DIR="${HOME}/Android/Sdk"
+PROJECT_DIR="${HOME}/AndroidStudioProjects/SimpleVirtualNetwork/nativevpn"
 BUILD_DIR="${PROJECT_DIR}/.cxx/Debug/jal3n810/arm64-v8a"
 OUTPUT_DIR="${PROJECT_DIR}/build/intermediates/cxx/Debug/jal3n810/obj/arm64-v8a"
 
