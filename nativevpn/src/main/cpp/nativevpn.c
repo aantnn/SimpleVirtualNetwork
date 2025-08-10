@@ -1,248 +1,197 @@
-#include "nativevpn.h"
-#include "global.h"
-#include <fcntl.h>
-#include <pthread.h>
-#include <signal.h>
-#include <stdlib.h>
+#include <jni.h>
+#include <android/log.h>
 #include <string.h>
+#include <pthread.h>
+#include <stdlib.h>
 #include <unistd.h>
-
-#define NATIVE_VPN_JNI_VERSION JNI_VERSION_1_6
-#define NATIVE_VPN_ERR_MEMORY "Memory allocation failed"
-#define NATIVE_VPN_ERR_INVALID "Invalid parameters"
-#define NATIVE_VPN_ERR_STRDUP "String duplication failed"
-#define NATIVE_VPN_ERR_LOCK "Lock operation failed"
-
-// Read-write lock for thread-safe access to shared configuration
-pthread_rwlock_t g_config_rwlock = PTHREAD_RWLOCK_INITIALIZER;
+#include "nativevpn.h"
+#define TAG "NativeVpn"
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 
 static inline int vpnClientEntrypoint(int argc, char *argv[]) {
-  return VpnClientMain(argc, argv);
+    return VpnClientMain(argc, argv);
+}
+// Global state protection
+pthread_rwlock_t g_config_rwlock = PTHREAD_RWLOCK_INITIALIZER;
+
+// Global configuration structure
+VpnConfig  g_config = {0};
+
+// Forward declarations
+static jboolean setDirectory(JNIEnv* env, const char** target, jstring path);
+static void freeConfig(JNIEnv* env);
+static JNIEnv* getJNIEnv(void);
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
+    (void)reserved;
+    g_config.jvm = vm;
+    return JNI_VERSION_1_6;
 }
 
-struct vpn_global_config g_vpn_config = {0};
+JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* vm, void* reserved) {
+    (void)vm;
+    (void)reserved;
 
-static int cleanupGlobalConfig(JNIEnv *env) {
-  if (pthread_rwlock_wrlock(&g_config_rwlock) != 0) {
-    ERROR_LOG(NATIVE_VPN_ERR_LOCK);
-    return -1;
-  }
-
-  if (g_vpn_config.thiz_java_vpn_service) {
-    (*env)->DeleteGlobalRef(env, g_vpn_config.thiz_java_vpn_service);
-    g_vpn_config.thiz_java_vpn_service = NULL;
-  }
-
-  free(g_vpn_config.temporary_dir_path);
-  g_vpn_config.temporary_dir_path = NULL;
-
-  free(g_vpn_config.log_dir_path);
-  g_vpn_config.log_dir_path = NULL;
-
-  free(g_vpn_config.database_dir_path);
-  g_vpn_config.database_dir_path = NULL;
-
-  g_vpn_config.jni_env = NULL;
-
-  pthread_rwlock_unlock(&g_config_rwlock);
-  return 0;
+    JNIEnv* env = getJNIEnv();
+    if (env) {
+        freeConfig(env);
+    }
+    pthread_rwlock_destroy(&g_config_rwlock);
 }
 
-extern jboolean getGlobalConfigString(char **output, const char *source) {
-  if (pthread_rwlock_rdlock(&g_config_rwlock) != 0) {
-    ERROR_LOG(NATIVE_VPN_ERR_LOCK);
-    return JNI_FALSE;
-  }
+JNIEXPORT void JNICALL
+Java_ru_valishin_nativevpn_NativeVpn_closeFd(JNIEnv* env, jobject thiz, jint fd) {
+    (void)env;
+    (void)thiz;
 
-  if (source) {
-    *output = strdup(source);
+    if (fd >= 0) {
+        close(fd);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_ru_valishin_nativevpn_NativeVpn_setTemporaryDirectory(JNIEnv* env, jobject thiz, jstring dir) {
+    (void)thiz;
+    pthread_rwlock_wrlock(&g_config_rwlock);
+    if (!setDirectory(env, &g_config.temporary_dir, dir)) {
+        LOGE("Failed to set temporary directory");
+    }
     pthread_rwlock_unlock(&g_config_rwlock);
-    return *output ? JNI_TRUE : JNI_FALSE;
-  }
-
-  pthread_rwlock_unlock(&g_config_rwlock);
-  return JNI_FALSE;
-}
-
-static jboolean updateGlobalConfig(char **config_field, JNIEnv *env,
-                                   jobject vpn_service, jstring new_value) {
-  if (!config_field || !env || !vpn_service || !new_value) {
-    ERROR_LOG(NATIVE_VPN_ERR_INVALID);
-    return JNI_FALSE;
-  }
-
-  const char *native_str = (*env)->GetStringUTFChars(env, new_value, NULL);
-  if (!native_str) {
-    ERROR_LOG("Failed to convert Java string");
-    return JNI_FALSE;
-  }
-
-  char *value_copy = strdup(native_str);
-  (*env)->ReleaseStringUTFChars(env, new_value, native_str);
-
-  if (!value_copy) {
-    ERROR_LOG(NATIVE_VPN_ERR_STRDUP);
-    return JNI_FALSE;
-  }
-
-  if (pthread_rwlock_wrlock(&g_config_rwlock) != 0) {
-    ERROR_LOG(NATIVE_VPN_ERR_LOCK);
-    free(value_copy);
-    return JNI_FALSE;
-  }
-
-  // Replace existing value
-  free(*config_field);
-  *config_field = value_copy;
-
-  // Initialize global reference if needed
-  if (!g_vpn_config.thiz_java_vpn_service) {
-    g_vpn_config.jni_env = env;
-    jobject global_ref = (*env)->NewGlobalRef(env, vpn_service);
-    if (!global_ref) {
-      ERROR_LOG("Failed to create global reference");
-      free(value_copy);
-      *config_field = NULL;
-      pthread_rwlock_unlock(&g_config_rwlock);
-      return JNI_FALSE;
-    }
-    g_vpn_config.thiz_java_vpn_service = global_ref;
-  }
-
-  pthread_rwlock_unlock(&g_config_rwlock);
-  return JNI_TRUE;
-}
-
-JNIEXPORT void JNICALL Java_ru_valishin_nativevpn_NativeVpn_closeFileDescriptor(
-    JNIEnv *env, jobject thiz, jint file_descriptor) {
-  (void)env;
-  (void)thiz; // Unused parameters
-
-  if (file_descriptor >= 0) {
-    close(file_descriptor);
-  }
 }
 
 JNIEXPORT void JNICALL
-Java_ru_valishin_nativevpn_NativeVpn_nativeStartVpnClient(
-    JNIEnv *env, jobject thiz, jobjectArray arguments) {
-  (void)thiz; // Unused parameter
-
-  if (!env || !arguments) {
-    ERROR_LOG(NATIVE_VPN_ERR_INVALID);
-    return;
-  }
-
-  jsize arg_count = (*env)->GetArrayLength(env, arguments);
-  if (arg_count <= 0) {
-    ERROR_LOG("Empty arguments array");
-    return;
-  }
-
-  char **arg_vector = calloc(arg_count + 1, sizeof(char *));
-  if (!arg_vector) {
-    ERROR_LOG(NATIVE_VPN_ERR_MEMORY);
-    return;
-  }
-
-  jboolean success = JNI_TRUE;
-  jsize allocated_count = 0;
-
-  for (jsize i = 0; i < arg_count && success; i++) {
-    jstring arg = (jstring)(*env)->GetObjectArrayElement(env, arguments, i);
-    if (!arg) {
-      success = JNI_FALSE;
-      continue;
+Java_ru_valishin_nativevpn_NativeVpn_setLogDirectory(JNIEnv* env, jobject thiz, jstring dir) {
+    (void)thiz;
+    pthread_rwlock_wrlock(&g_config_rwlock);
+    if (!setDirectory(env, &g_config.log_dir, dir)) {
+        LOGE("Failed to set log directory");
     }
-
-    const char *native_arg = (*env)->GetStringUTFChars(env, arg, NULL);
-    if (!native_arg) {
-      (*env)->DeleteLocalRef(env, arg);
-      success = JNI_FALSE;
-      continue;
-    }
-
-    arg_vector[i] = strdup(native_arg);
-    (*env)->ReleaseStringUTFChars(env, arg, native_arg);
-    (*env)->DeleteLocalRef(env, arg);
-
-    if (!arg_vector[i]) {
-      ERROR_LOG(NATIVE_VPN_ERR_STRDUP);
-      success = JNI_FALSE;
-    } else {
-      allocated_count++;
-    }
-  }
-
-  if (!success) {
-    // Free all allocated strings
-    for (jsize j = 0; j < allocated_count; j++) {
-      free(arg_vector[j]);
-    }
-    free(arg_vector);
-    return;
-  }
-
-  int result = vpnClientEntrypoint(arg_count, arg_vector);
-
-  // Free all allocated strings
-  for (jsize i = 0; i < arg_count; i++) {
-    free(arg_vector[i]);
-  }
-  free(arg_vector);
-}
-
-JNIEXPORT jstring JNICALL Java_ru_valishin_nativevpn_NativeVpn_getLogDirectory(
-    JNIEnv *env, jobject thiz) {
-  char *log_dir = NULL;
-  if (!getGlobalConfigString(&log_dir, g_vpn_config.log_dir_path)) {
-    return NULL;
-  }
-
-  jstring result = (*env)->NewStringUTF(env, log_dir);
-  free(log_dir);
-  return result;
-}
-
-JNIEXPORT void JNICALL Java_ru_valishin_nativevpn_NativeVpn_setLogDirectory(
-    JNIEnv *env, jobject thiz, jstring new_log_dir) {
-  if (!updateGlobalConfig(&g_vpn_config.log_dir_path, env, thiz, new_log_dir)) {
-    ERROR_LOG("Failed to set log directory");
-  }
+    pthread_rwlock_unlock(&g_config_rwlock);
 }
 
 JNIEXPORT void JNICALL
-Java_ru_valishin_nativevpn_NativeVpn_setDatabaseDirectory(JNIEnv *env,
-                                                          jobject thiz,
-                                                          jstring new_db_dir) {
-  if (!updateGlobalConfig(&g_vpn_config.database_dir_path, env, thiz,
-                          new_db_dir)) {
-    ERROR_LOG("Failed to set database directory");
-  }
-}
-
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
-  (void)reserved;
-  return NATIVE_VPN_JNI_VERSION;
-}
-
-JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved) {
-  (void)reserved;
-
-  JNIEnv *env;
-  if ((*vm)->GetEnv(vm, (void **)&env, NATIVE_VPN_JNI_VERSION) == JNI_OK) {
-    if (cleanupGlobalConfig(env) != 0) {
-      ERROR_LOG("Failed to cleanup global config");
+Java_ru_valishin_nativevpn_NativeVpn_setDatabaseDirectory(JNIEnv* env, jobject thiz, jstring dir) {
+    (void)thiz;
+    pthread_rwlock_wrlock(&g_config_rwlock);
+    if (!setDirectory(env, &g_config.database_dir, dir)) {
+        LOGE("Failed to set database directory");
     }
-  }
-  pthread_rwlock_destroy(&g_config_rwlock);
+    pthread_rwlock_unlock(&g_config_rwlock);
 }
 
 JNIEXPORT void JNICALL
-Java_ru_valishin_nativevpn_NativeVpn_setTemporaryDirectory(
-    JNIEnv *env, jobject thiz, jstring new_temp_dir) {
-  if (!updateGlobalConfig(&g_vpn_config.temporary_dir_path, env, thiz,
-                          new_temp_dir)) {
-    ERROR_LOG("Failed to set temporary directory");
-  }
+Java_ru_valishin_nativevpn_NativeVpn_nativeStartVpnClient(JNIEnv* env, jobject thiz, jobjectArray args) {
+    (void)thiz;
+
+    if (!env || !args) {
+        LOGE("Invalid parameters passed to nativeStartVpnClient");
+        return;
+    }
+
+    jsize arg_count = (*env)->GetArrayLength(env, args);
+    if (arg_count <= 0) {
+        LOGE("No arguments provided");
+        return;
+    }
+
+    // Allocate array for arguments
+    char** argv = calloc(arg_count + 1, sizeof(char*));
+    if (!argv) {
+        LOGE("Memory allocation failed for argument array");
+        return;
+    }
+
+    // Convert Java string array to C strings
+    jboolean success = JNI_TRUE;
+    for (jsize i = 0; i < arg_count && success; i++) {
+        jstring arg = (*env)->GetObjectArrayElement(env, args, i);
+        if (!arg) {
+            success = JNI_FALSE;
+            continue;
+        }
+
+        const char* str = (*env)->GetStringUTFChars(env, arg, NULL);
+        if (!str) {
+            success = JNI_FALSE;
+        } else {
+            argv[i] = strdup(str);
+            (*env)->ReleaseStringUTFChars(env, arg, str);
+
+            if (!argv[i]) {
+                success = JNI_FALSE;
+            }
+        }
+        (*env)->DeleteLocalRef(env, arg);
+    }
+
+    // Start VPN if argument conversion was successful
+    if (success) {
+        // TODO: Implement actual VPN client start
+        // vpn_client_start(arg_count, argv);
+        LOGI("Starting VPN client with %d arguments", arg_count);
+        int result = vpnClientEntrypoint(arg_count, argv);
+    }
+
+    // Cleanup
+    for (jsize i = 0; i < arg_count; i++) {
+        free(argv[i]);
+    }
+    free(argv);
+}
+
+// Helper functions
+static jboolean setDirectory(JNIEnv* env, const char** target, jstring path) {
+    if (!env || !target || !path) {
+        return JNI_FALSE;
+    }
+
+    const char* native_path = (*env)->GetStringUTFChars(env, path, NULL);
+    if (!native_path) {
+        return JNI_FALSE;
+    }
+
+    char* new_path = strdup(native_path);
+    (*env)->ReleaseStringUTFChars(env, path, native_path);
+
+    if (!new_path) {
+        return JNI_FALSE;
+    }
+
+    free((void*)*target);
+    *target = new_path;
+    return JNI_TRUE;
+}
+
+static void freeConfig(JNIEnv* env) {
+    pthread_rwlock_wrlock(&g_config_rwlock);
+
+    free(g_config.temporary_dir);
+    free(g_config.log_dir);
+    free(g_config.database_dir);
+
+    if (g_config.context) {
+        (*env)->DeleteGlobalRef(env, g_config.context);
+    }
+
+    memset(&g_config, 0, sizeof(g_config));
+
+    pthread_rwlock_unlock(&g_config_rwlock);
+}
+
+static JNIEnv* getJNIEnv(void) {
+    if (!g_config.jvm) {
+        return NULL;
+    }
+
+    JNIEnv* env = NULL;
+    jint result = (*g_config.jvm)->GetEnv(g_config.jvm, (void**)&env, JNI_VERSION_1_6);
+
+    if (result == JNI_EDETACHED) {
+        if ((*g_config.jvm)->AttachCurrentThread(g_config.jvm, &env, NULL) != JNI_OK) {
+            return NULL;
+        }
+    }
+
+    return env;
 }

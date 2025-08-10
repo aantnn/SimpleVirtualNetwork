@@ -23,7 +23,17 @@ struct vpn_global_config {
 
 };
 
-extern struct vpn_global_config g_vpn_config;
+typedef struct {
+    char* temporary_dir;
+    char* log_dir;
+    char* database_dir;
+    jobject context;     // Global reference to Context
+    JavaVM* jvm;        // Cached JavaVM pointer
+} VpnConfig;
+
+extern VpnConfig g_config;
+
+//extern struct vpn_global_config g_vpn_config;
 #define TAG "NativeVpn"
 
 #endif

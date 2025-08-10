@@ -122,7 +122,7 @@ index 7818d79..f350672 100644
    if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
      target_link_libraries(cedar PRIVATE mayaqua pcap)
 diff --git a/src/Cedar/Console.c b/src/Cedar/Console.c
-index 45bab42..9097ff4 100644
+index 45bab42..57d1fd1 100644
 --- a/src/Cedar/Console.c
 +++ b/src/Cedar/Console.c
 @@ -28,9 +28,14 @@
@@ -184,7 +184,7 @@ index 51acec0..08ae740 100644
  
  if(WIN32)
 diff --git a/src/Mayaqua/FileIO.c b/src/Mayaqua/FileIO.c
-index 5e4b9c9..ad420ba 100644
+index 5e4b9c9..22b4421 100644
 --- a/src/Mayaqua/FileIO.c
 +++ b/src/Mayaqua/FileIO.c
 @@ -18,6 +18,10 @@
@@ -198,7 +198,27 @@ index 5e4b9c9..ad420ba 100644
  #include <Hamcore.h>
  
  static char exe_file_name[MAX_SIZE] = "/tmp/a.out";
-@@ -916,6 +920,10 @@ void GetLogDir(char *name, UINT size)
+@@ -871,6 +875,11 @@ int CompareHamcore(void *p1, void *p2)
+ // Getting the name of the directory where the EXE file is in
+ void GetExeDir(char *name, UINT size)
+ {
++#ifdef __ANDROID__
++    char* tmp = GetAndroidTmpDir();
++    StrCpy(name, size, tmp);
++    free(tmp);
++#else
+ 	// Validate arguments
+ 	if (name == NULL)
+ 	{
+@@ -878,6 +887,7 @@ void GetExeDir(char *name, UINT size)
+ 	}
+ 
+ 	GetDirNameFromFilePath(name, size, exe_file_name);
++#endif
+ }
+ void GetExeDirW(wchar_t *name, UINT size)
+ {
+@@ -916,6 +926,10 @@ void GetLogDir(char *name, UINT size)
  {
  #ifdef SE_LOGDIR
  	Format(name, size, SE_LOGDIR);
@@ -209,7 +229,7 @@ index 5e4b9c9..ad420ba 100644
  #else
  	GetExeDir(name, size);
  #endif
-@@ -934,6 +942,10 @@ void GetDbDir(char *name, UINT size)
+@@ -934,6 +948,10 @@ void GetDbDir(char *name, UINT size)
  {
  #ifdef SE_DBDIR
  	Format(name, size, SE_DBDIR);
@@ -220,7 +240,7 @@ index 5e4b9c9..ad420ba 100644
  #else
  	GetExeDir(name, size);
  #endif
-@@ -952,6 +964,10 @@ void GetPidDir(char *name, UINT size)
+@@ -952,6 +970,10 @@ void GetPidDir(char *name, UINT size)
  {
  #ifdef SE_PIDDIR
  	Format(name, size, SE_PIDDIR);
@@ -232,7 +252,7 @@ index 5e4b9c9..ad420ba 100644
  	GetExeDir(name, size);
  #endif
 diff --git a/src/Mayaqua/Mayaqua.c b/src/Mayaqua/Mayaqua.c
-index 8649275..f75ebbc 100644
+index 8649275..ac8ee97 100644
 --- a/src/Mayaqua/Mayaqua.c
 +++ b/src/Mayaqua/Mayaqua.c
 @@ -22,6 +22,10 @@
@@ -286,22 +306,37 @@ index 8649275..f75ebbc 100644
  	}
  }
  
+diff --git a/src/Mayaqua/Str.c b/src/Mayaqua/Str.c
+index 555d2d2..53d1072 100644
+--- a/src/Mayaqua/Str.c
++++ b/src/Mayaqua/Str.c
+@@ -18,6 +18,9 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
++#ifdef __ANDROID__
++#include <androidhelpers.h>
++#endif
+ 
+ // Locking for call the token handling function
+ LOCK *token_lock = NULL;
 diff --git a/src/Mayaqua/Unix.c b/src/Mayaqua/Unix.c
-index 0c3778d..3daff40 100755
+index 0c3778d..2ad6b08 100755
 --- a/src/Mayaqua/Unix.c
 +++ b/src/Mayaqua/Unix.c
-@@ -80,6 +80,10 @@ struct statfs {
+@@ -80,6 +80,11 @@ struct statfs {
  #endif	// NO_VLAN
  #endif	// UNIX_MACOS
  
 +#ifdef __ANDROID__
 +#include <sys/vfs.h>
++#include<androidhelpers.h>
 +#endif
 +
  // Scandir() function for Solaris
  #ifdef	UNIX_SOLARIS
  #define scandir local_scandir
-@@ -2737,6 +2741,14 @@ UINT UnixService(int argc, char *argv[], char *name, SERVICE_FUNCTION *start, SE
+@@ -2737,6 +2742,14 @@ UINT UnixService(int argc, char *argv[], char *name, SERVICE_FUNCTION *start, SE
  		return 0;
  	}
  
@@ -316,7 +351,7 @@ index 0c3778d..3daff40 100755
  	if (argc >= 2 && StrCmpi(argv[1], UNIX_SVC_ARG_EXEC_SVC) == 0)
  	{
  		UINT pid;
-@@ -2788,6 +2800,7 @@ RESTART_PROCESS:
+@@ -2788,6 +2801,7 @@ RESTART_PROCESS:
  	}
  
  	return 0;
@@ -340,7 +375,7 @@ index 528a637..957bf79 100644
  
  set_target_properties(vpnclient
 diff --git a/src/vpnclient/vpncsvc.c b/src/vpnclient/vpncsvc.c
-index 74d6da0..c1df612 100644
+index 74d6da0..94bc87c 100644
 --- a/src/vpnclient/vpncsvc.c
 +++ b/src/vpnclient/vpncsvc.c
 @@ -43,4 +43,10 @@ int main(int argc, char *argv[])

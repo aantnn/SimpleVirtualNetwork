@@ -9,7 +9,9 @@ import java.io.IOException
 class NativeVpn(private val applicationInfo: ApplicationInfo, private val context: Context) {
     companion object {
         private const val TAG = "NativeVpn"
-        private const val HAMCORE_FILENAME = "hamcore_se2_v${BuildConfig.SOFTETHERVPN_VERSION}"
+        private const val HAMCORE_FILENAME = "hamcore_se2_${BuildConfig.SOFTETHERVPN_VERSION}"
+        private const val TARGET_HAMCORE_FILENAME = "hamcore.se2"
+        private const val HAMCORE_VERSION_FILENAME = "hamcore_version.txt"
         private const val SE_TMP_DIR = "se_tmp"
         private const val SE_DB_DIR = "se_db"
 
@@ -17,6 +19,7 @@ class NativeVpn(private val applicationInfo: ApplicationInfo, private val contex
             System.loadLibrary("nativevpn")
         }
     }
+    private val currentApkHamcoreResourceName = "hamcore_se2_${BuildConfig.SOFTETHERVPN_VERSION}"
 
     private val executablePath: String = "${applicationInfo.nativeLibraryDir}/libnativevpn.so"
     private val temporaryDir: String = "${context.cacheDir.absolutePath}/$SE_TMP_DIR"
@@ -28,6 +31,7 @@ class NativeVpn(private val applicationInfo: ApplicationInfo, private val contex
 
     private fun initializeDirectories() {
         try {
+            File(temporaryDir).mkdirs()
             setTemporaryDirectory(temporaryDir)
             setLogDirectory(temporaryDir)
             setDatabaseDirectory(databaseDir)
@@ -35,45 +39,74 @@ class NativeVpn(private val applicationInfo: ApplicationInfo, private val contex
         } catch (e: IOException) {
             Log.e(TAG, "Failed to initialize VPN directories", e)
             throw VpnInitializationException("Failed to initialize VPN", e)
+        } catch (e: Exception) { // Catch other potential exceptions during init
+            Log.e(TAG, "Unexpected error during VPN initialization", e)
+            throw VpnInitializationException("Unexpected error during VPN initialization", e)
         }
     }
 
     private fun copyHamcore() {
+        val targetHamcoreFile = File(temporaryDir, "hamcore.se2")
+        val versionFile = File(temporaryDir, "hamcore_se2.ver")
+        val currentApkVersion = BuildConfig.SOFTETHERVPN_VERSION
         try {
-            File(temporaryDir).mkdirs()
-            val hamcoreFile = File(temporaryDir, HAMCORE_FILENAME)
-            
-            if (!hamcoreFile.exists()) {
+            var shouldCopy = true // Assume we need to copy by default
+
+            if (targetHamcoreFile.exists() && versionFile.exists()) {
+                val storedVersion = versionFile.readText().trim()
+                if (storedVersion == currentApkVersion) {
+                    Log.i(TAG, "Hamcore version $currentApkVersion is already up to date.")
+                    shouldCopy = false
+                } else {
+                    Log.i(TAG, "Hamcore update detected. Stored: $storedVersion, APK: $currentApkVersion. Will replace.")
+                }
+            } else {
+                Log.i(TAG, "No existing hamcore or version file found. Will copy from APK.")
+            }
+
+            if (shouldCopy) {
+                Log.d(TAG, "Attempting to copy hamcore resource: $currentApkHamcoreResourceName to $TARGET_HAMCORE_FILENAME")
                 val resourceId = try {
                     context.resources.getIdentifier(
-                        HAMCORE_FILENAME,
+                        currentApkHamcoreResourceName, // Use the dynamically constructed resource name
                         "raw",
                         context.packageName
                     )
+                } catch (e: android.content.res.Resources.NotFoundException) {
+                    Log.e(TAG, "Hamcore resource not found in APK: $currentApkHamcoreResourceName", e)
+                    throw VpnInitializationException("Failed to find hamcore resource $currentApkHamcoreResourceName in APK", e)
                 } catch (e: Exception) {
-                    throw VpnInitializationException("Failed to find hamcore resource for version ${HAMCORE_FILENAME}", e)
+                    Log.e(TAG, "Error getting identifier for hamcore resource $currentApkHamcoreResourceName", e)
+                    throw VpnInitializationException("Error finding hamcore resource $currentApkHamcoreResourceName", e)
                 }
 
-                context.resources.openRawResource(resourceId).use { input ->
-                    hamcoreFile.outputStream().use { output ->
-                        input.copyTo(output)
+                if (resourceId == 0) {
+                    Log.e(TAG, "Hamcore resource $currentApkHamcoreResourceName not found (ID was 0). Package: ${context.packageName}")
+                    throw VpnInitializationException("Hamcore resource $currentApkHamcoreResourceName not found in APK (ID was 0)")
+                }
+
+                Log.d(TAG, "Resource ID for $currentApkHamcoreResourceName is $resourceId")
+
+                context.resources.openRawResource(resourceId).use { inputStream ->
+                    targetHamcoreFile.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
                     }
                 }
+                // Update the version file with the new version
+                versionFile.writeText(currentApkVersion)
+                Log.i(TAG, "Successfully copied hamcore $currentApkHamcoreResourceName to $TARGET_HAMCORE_FILENAME and updated version to $currentApkVersion.")
             }
-            Thread {
-                try {
-                    File(temporaryDir).listFiles()?.forEach { file ->
-                        if (file.name.startsWith("hamcore_se2_v") && file.name != HAMCORE_FILENAME) {
-                            file.delete()
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to clean up old hamcore files", e)
-                }
-            }.start()
+
+
         } catch (e: IOException) {
-            Log.e(TAG, "Failed to copy hamcore file", e)
-            throw VpnInitializationException("Failed to copy hamcore file", e)
+            Log.e(TAG, "IOException during hamcore copy/versioning process for $currentApkHamcoreResourceName", e)
+            throw VpnInitializationException("Failed to copy/version hamcore file due to IO error", e)
+        } catch (e: VpnInitializationException) {
+            // Re-throw specific exceptions if already a VpnInitializationException
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error during hamcore copy/versioning for $currentApkHamcoreResourceName", e)
+            throw VpnInitializationException("An unexpected error occurred during hamcore setup", e)
         }
     }
 
